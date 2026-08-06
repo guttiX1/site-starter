@@ -47,17 +47,64 @@ The reason this can be cheap and multiplayer:
 - **Free tier + WASM reducers** — the *infrastructure* cost is near-zero; the
   only real cost is the LLM calls inside MiroFish.
 
-### 3. MCP — the interface (so agents and apps can drive it)
-A thin Model Context Protocol tool surface. Any agent, app, or the web UI calls
-the same tools:
+### 3. MCP — the interface (bring your own agent)
+The engine is an **MCP server**, not an app you have to use. Anyone points their
+own agent/client at it and drives the same tools. You don't build the agent —
+you build the thing every agent wants to call.
 - `create_scenario(description, audience)` → scenario id
+- `define_persona(scenario_id, profile)` → persona id (see influence graph below)
 - `run_simulation(scenario_id, budget_tier)` → run id (kicks off MiroFish)
-- `get_verdict(run_id)` → the `verdict.json`
+- `get_verdict(run_id)` → the `verdict.json` (includes who-moved-whom)
 - `subscribe(scenario_id)` → live updates via SpacetimeDB
 
 > Note: MiroFish *is already* a swarm (its OASIS agents). MCP is **not** a second
 > swarm — it's orchestration. It decides *when and what* to simulate. Keeping
 > those two roles separate is what stops this from becoming buzzword soup.
+
+---
+
+## The influence graph — model the shapers, not just the crowd
+
+This is the feature that makes it worth more than a poll. Instead of a faceless
+crowd, you define the **specific people who set opinion**, and the sim shows how
+a reaction *cascades* from them outward.
+
+A persona is a **profile**, not a faceless dot:
+
+```
+profile {
+  role        : "tech journalist" | "crypto influencer" | "site editor" | ...
+  lean        : political / ideological tilt (e.g. progressive, libertarian)
+  platform    : where they post (X, a newsletter, a site)
+  reach       : how many they influence  (sets contagion weight)
+  tone        : skeptical / hype / measured
+  interests   : the topics they actually care about
+}
+```
+
+You arrange them in tiers, and MiroFish runs the contagion between tiers:
+
+```
+Tier 1  opinion-shapers   (journalists, editors, big accounts)  ── set the frame
+Tier 2  amplifiers        (mid influencers, communities)        ── spread or kill it
+Tier 3  the crowd         (everyone else)                       ── the outcome
+```
+
+Push a problem in at Tier 1, and the verdict tells you **who moved whom** — did
+the tech-Democrat journalist pick it up, did crypto twitter amplify or bury it,
+where did it stall. That cascade *is* the product.
+
+### Responsible use — read this before naming real people
+Building a profile from someone's **public role + public writing** ("a
+tech-leaning-Democrat journalist archetype") is fair game and, honestly, *more
+accurate* — you're modeling a type of reaction, not puppeteering a named human.
+
+Impersonating a **specific, named real individual** — "simulate exactly what
+`@RealJournalist` will say" — is where you invite defamation, publicity-rights,
+and platform-ToS problems, and the output is less reliable anyway (you can't
+verify it). **Default: archetype profiles seeded from public info. Named real
+people: don't, or only with clear consent and heavy disclaimers.** This keeps
+the tool powerful *and* keeps you out of court.
 
 ---
 
@@ -81,14 +128,16 @@ targets the LLM bill — this is what turns a "$$$ hedge-fund toy" into a "$5 to
 
 ```
 scenario   { id, owner, description, audience, created_at }
+persona    { id, scenario_id, role, lean, platform, reach, tone, tier }  -- the shapers
 persona_graph { scenario_id, graph_blob, model, cached_at }   -- the cache
 run        { id, scenario_id, budget_tier, status, cost_estimate, started_at }
-verdict    { run_id, outcome, confidence, summary, raw_json, finished_at }
+verdict    { run_id, outcome, confidence, summary, cascade_json, raw_json, finished_at }
 subscriber { scenario_id, user }                              -- who's watching
 ```
 
-Reducers: `submit_run`, `record_verdict`, `bump_status`. Clients subscribe to
-`run` + `verdict` for a scenario and get live progress for free.
+`cascade_json` on the verdict is the who-moved-whom trace across the tiers.
+Reducers: `submit_run`, `record_verdict`, `bump_status`, `add_persona`. Clients
+subscribe to `run` + `verdict` for a scenario and get live progress for free.
 
 ---
 
@@ -125,7 +174,8 @@ Decide this early. It shapes the whole business, not just the code.
 ## Status
 
 - [x] Named the primitive and the three layers
-- [ ] Stub the MCP tool surface
-- [ ] Stand up SpacetimeDB tables + reducers
+- [x] Bring-your-own-agent (MCP server) + influence-graph persona model
+- [ ] Stub the MCP tool surface (incl. `define_persona`)
+- [ ] Stand up SpacetimeDB tables + reducers (incl. `persona` + `add_persona`)
 - [ ] Wire MiroFish cheap-mode behind `run_simulation`
 - [ ] Thin Next.js UI for the first user
