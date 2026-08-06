@@ -124,20 +124,73 @@ targets the LLM bill — this is what turns a "$$$ hedge-fund toy" into a "$5 to
 
 ---
 
+## The Canvas — the primary UI (glass box, not black box)
+
+The graph is not decoration. It's **both how you build the sim and how you read
+the result** — one canvas, two modes. This is the product's face.
+
+### Semantic zoom: communities ↔ individuals
+The canvas has levels of detail, like Obsidian / a map:
+
+```
+Zoomed OUT  →  community nodes   ("crypto twitter", "tech press", "suburban voters")
+                these bubbles are the "regions"
+Zoomed IN   →  the individual shapers inside a community
+                (a specific tech-journalist archetype, a big account, an editor)
+```
+
+A **region = a community bubble**. Zooming into it reveals the individuals that
+compose it; **replay** shows how those individuals aligned into it. That's
+literally "see how the region was made."
+
+### Mode 1 — Build (set up the world)
+- Drag nodes onto the canvas. Zoom out to place communities, zoom in to add or
+  edit individual shapers inside them.
+- Click a node → **profile card** (role, lean, platform, reach, tone). This is
+  how the user "decides the people/sites."
+- Draw edges = influence/follows. Nodes auto-sort into tiers (shapers →
+  amplifiers → crowd).
+
+### Mode 2 — Replay (watch what happened)
+- Push the problem in at the top; hit play.
+- Nodes **light up** as they react, edges **pulse** as influence flows, and
+  camps/regions visibly **crystallize**.
+- A **timeline scrubber** rewinds the whole thing — see who moved first, which
+  edge tipped a region, where it stalled.
+- Click any node at any point in time → what it "said" and why it flipped.
+
+### What this demands technically (so we plan for it now)
+- **Semantic zoom / level-of-detail rendering** — render communities vs
+  individuals depending on zoom. (Canvas/WebGL graph lib, not plain SVG, once
+  node counts grow.)
+- **Time-series of node states**, not just a final verdict — the replay needs
+  every node's state at each simulated step. MiroFish must emit a *timeline*,
+  and SpacetimeDB stores it (see `frame` below).
+- **Stable node identities** across build → run → replay so the map you built is
+  the map that animates.
+
+---
+
 ## Data model sketch (SpacetimeDB tables)
 
 ```
 scenario   { id, owner, description, audience, created_at }
-persona    { id, scenario_id, role, lean, platform, reach, tone, tier }  -- the shapers
-persona_graph { scenario_id, graph_blob, model, cached_at }   -- the cache
+community  { id, scenario_id, label, lean, size, tier }        -- zoomed-out "region"
+persona    { id, scenario_id, community_id, role, lean, platform, reach, tone }  -- zoomed-in shaper
+edge       { scenario_id, from_persona, to_persona, weight }   -- influence links
+persona_graph { scenario_id, graph_blob, model, cached_at }    -- the cache
 run        { id, scenario_id, budget_tier, status, cost_estimate, started_at }
+frame      { run_id, step, node_id, state, said }              -- per-step replay timeline
 verdict    { run_id, outcome, confidence, summary, cascade_json, raw_json, finished_at }
-subscriber { scenario_id, user }                              -- who's watching
+subscriber { scenario_id, user }                               -- who's watching
 ```
 
-`cascade_json` on the verdict is the who-moved-whom trace across the tiers.
-Reducers: `submit_run`, `record_verdict`, `bump_status`, `add_persona`. Clients
-subscribe to `run` + `verdict` for a scenario and get live progress for free.
+`frame` is what powers the scrubber — one row per node per simulated step, so
+the canvas can replay the formation of each region. `cascade_json` on the
+verdict is the summarized who-moved-whom. Reducers: `add_community`,
+`add_persona`, `add_edge`, `submit_run`, `record_frame`, `record_verdict`,
+`bump_status`. Clients subscribe to `frame` + `verdict` for a run and the canvas
+animates live.
 
 ---
 
@@ -175,7 +228,9 @@ Decide this early. It shapes the whole business, not just the code.
 
 - [x] Named the primitive and the three layers
 - [x] Bring-your-own-agent (MCP server) + influence-graph persona model
+- [x] Canvas UX: semantic zoom (communities ↔ individuals), build + replay modes
+- [ ] Pick the graph rendering lib (semantic zoom + replay animation)
 - [ ] Stub the MCP tool surface (incl. `define_persona`)
-- [ ] Stand up SpacetimeDB tables + reducers (incl. `persona` + `add_persona`)
-- [ ] Wire MiroFish cheap-mode behind `run_simulation`
-- [ ] Thin Next.js UI for the first user
+- [ ] Stand up SpacetimeDB tables + reducers (incl. `frame` timeline for replay)
+- [ ] Wire MiroFish cheap-mode behind `run_simulation` (must emit per-step frames)
+- [ ] Thin Next.js UI: the canvas, one user, one scenario
