@@ -1,0 +1,585 @@
+<style>
+  :root{
+    --font-ui: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono: ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    /* light theme (chosen cool neutrals, indigo-biased) */
+    --bg:#eceef5; --panel:#ffffff; --panel-2:#f5f6fb; --inset:#eef0f7;
+    --border:#e0e4ef; --border-2:#d3d8e6;
+    --text:#171a24; --muted:#5c6377; --faint:#98a0b4;
+    --accent:#5b4fe0; --accent-soft:#eae7fd;
+    --pro:#2f6ff0; --amplify:#0fa3b8; --neutral:#7b8296; --stall:#e04b68; --seed:#6a5cf0;
+    --grid:#e6e9f3;
+    --shadow: 0 1px 2px rgba(20,22,40,.05), 0 8px 24px rgba(20,22,40,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b0d14; --panel:#141724; --panel-2:#1a1e2c; --inset:#10131d;
+      --border:#262b3b; --border-2:#323850;
+      --text:#e7e9f2; --muted:#8a90a4; --faint:#59607a;
+      --accent:#8b7dff; --accent-soft:#20203c;
+      --pro:#4f8ff7; --amplify:#22d3ee; --neutral:#6b7280; --stall:#fb7185; --seed:#9a8dff;
+      --grid:#1b1f2e;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#eceef5; --panel:#ffffff; --panel-2:#f5f6fb; --inset:#eef0f7;
+    --border:#e0e4ef; --border-2:#d3d8e6;
+    --text:#171a24; --muted:#5c6377; --faint:#98a0b4;
+    --accent:#5b4fe0; --accent-soft:#eae7fd;
+    --pro:#2f6ff0; --amplify:#0fa3b8; --neutral:#7b8296; --stall:#e04b68; --seed:#6a5cf0;
+    --grid:#e6e9f3; --shadow: 0 1px 2px rgba(20,22,40,.05), 0 8px 24px rgba(20,22,40,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b0d14; --panel:#141724; --panel-2:#1a1e2c; --inset:#10131d;
+    --border:#262b3b; --border-2:#323850;
+    --text:#e7e9f2; --muted:#8a90a4; --faint:#59607a;
+    --accent:#8b7dff; --accent-soft:#20203c;
+    --pro:#4f8ff7; --amplify:#22d3ee; --neutral:#6b7280; --stall:#fb7185; --seed:#9a8dff;
+    --grid:#1b1f2e; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);
+    -webkit-font-smoothing:antialiased;line-height:1.45}
+  .stage{overflow-x:auto;padding:18px}
+  .app{min-width:900px;max-width:1360px;margin:0 auto;background:var(--panel);
+    border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);
+    display:flex;flex-direction:column;height:min(84vh,760px);overflow:hidden}
+
+  /* ---------- top bar ---------- */
+  .topbar{display:flex;align-items:center;gap:14px;padding:12px 16px;
+    border-bottom:1px solid var(--border);background:var(--panel-2)}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:14px;letter-spacing:.2px}
+  .brand .dot{width:9px;height:9px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--amplify),var(--accent));
+    box-shadow:0 0 0 3px var(--accent-soft)}
+  .scenario{flex:1;min-width:0;font-size:13px;color:var(--muted);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .scenario b{color:var(--text);font-weight:600}
+  .modeswitch{display:flex;background:var(--inset);border:1px solid var(--border);
+    border-radius:9px;padding:3px;gap:2px}
+  .modeswitch button{font:600 12px/1 var(--font-ui);color:var(--muted);background:none;
+    border:0;padding:7px 14px;border-radius:7px;cursor:pointer;transition:.15s}
+  .modeswitch button.on{background:var(--panel);color:var(--text);box-shadow:var(--shadow)}
+  .modeswitch button.on[data-mode="replay"]{color:var(--accent)}
+  .budget{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+  .budget select{font:500 12px var(--font-ui);color:var(--text);background:var(--panel);
+    border:1px solid var(--border-2);border-radius:7px;padding:6px 8px;cursor:pointer}
+  .run{display:inline-flex;align-items:center;gap:7px;font:700 12.5px var(--font-ui);
+    color:#fff;background:linear-gradient(180deg,var(--accent),color-mix(in srgb,var(--accent) 82%,#000));
+    border:0;padding:9px 15px;border-radius:9px;cursor:pointer;box-shadow:var(--shadow)}
+  .run:hover{filter:brightness(1.06)}
+  .run .tri{width:0;height:0;border-left:8px solid #fff;border-top:5px solid transparent;border-bottom:5px solid transparent}
+
+  /* ---------- body 3-pane ---------- */
+  .body{flex:1;display:grid;grid-template-columns:248px 1fr 296px;min-height:0}
+  .rail{border-right:1px solid var(--border);background:var(--panel);overflow-y:auto}
+  .rail.right{border-right:0;border-left:1px solid var(--border)}
+  .rail-pad{padding:15px}
+  .eyebrow{font:700 10.5px/1 var(--font-mono);letter-spacing:.13em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 4px}
+  .hint{font-size:11px;color:var(--muted);margin:0 0 12px}
+
+  .group-label{font:600 11px var(--font-ui);color:var(--muted);margin:14px 0 7px}
+  .chip{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;
+    border:1px solid var(--border);background:var(--panel-2);margin-bottom:7px;cursor:grab;
+    font-size:12px;transition:.15s}
+  .chip:hover{border-color:var(--accent);transform:translateX(2px)}
+  .chip .swatch{width:14px;height:14px;border-radius:50%;flex:none;
+    background:color-mix(in srgb,var(--accent) 22%,transparent);border:1.5px solid var(--accent)}
+  .chip.small{padding:7px 9px}
+  .chip.small .swatch{width:10px;height:10px;border-radius:3px}
+  .newbtn{width:100%;padding:9px;border-radius:9px;border:1px dashed var(--border-2);
+    background:none;color:var(--muted);font:600 12px var(--font-ui);cursor:pointer;margin-top:4px}
+  .newbtn:hover{color:var(--accent);border-color:var(--accent)}
+
+  /* verdict (replay rail) */
+  .verdict-card{border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-bottom:16px}
+  .verdict-head{padding:13px 14px;background:color-mix(in srgb,var(--pro) 12%,var(--panel))}
+  .verdict-out{font-size:19px;font-weight:750;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+  .verdict-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .conf{padding:11px 14px}
+  .conf-label{font:600 10.5px/1 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);display:flex;justify-content:space-between}
+  .conf-bar{height:7px;border-radius:4px;background:var(--inset);margin-top:7px;overflow:hidden}
+  .conf-bar > i{display:block;height:100%;width:78%;border-radius:4px;
+    background:linear-gradient(90deg,var(--pro),var(--amplify))}
+  .flow{list-style:none;margin:0;padding:0;counter-reset:f}
+  .flow li{position:relative;padding:8px 0 8px 26px;font-size:12px;color:var(--muted);
+    border-bottom:1px solid var(--border)}
+  .flow li:last-child{border-bottom:0}
+  .flow li::before{counter-increment:f;content:counter(f);position:absolute;left:0;top:8px;
+    width:18px;height:18px;border-radius:50%;background:var(--inset);color:var(--muted);
+    font:700 10px/18px var(--font-mono);text-align:center}
+  .flow li.good{color:var(--text)}
+  .flow li.good::before{background:color-mix(in srgb,var(--pro) 20%,transparent);color:var(--pro)}
+  .flow li.bad::before{background:color-mix(in srgb,var(--stall) 20%,transparent);color:var(--stall)}
+
+  /* ---------- canvas ---------- */
+  .canvas-wrap{position:relative;background:
+    radial-gradient(circle at 1px 1px,var(--grid) 1px,transparent 0) 0 0/26px 26px,var(--inset);
+    overflow:hidden}
+  .canvas-top{position:absolute;top:12px;left:14px;right:14px;display:flex;align-items:center;
+    gap:10px;z-index:5;pointer-events:none}
+  .canvas-top .tag{pointer-events:auto;font:600 10.5px var(--font-mono);letter-spacing:.06em;
+    text-transform:uppercase;color:var(--faint);background:color-mix(in srgb,var(--panel) 78%,transparent);
+    border:1px solid var(--border);border-radius:20px;padding:5px 11px;backdrop-filter:blur(6px)}
+  .backchip{pointer-events:auto;display:none;align-items:center;gap:6px;cursor:pointer;
+    font:600 11px var(--font-ui);color:var(--accent);background:var(--accent-soft);
+    border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);border-radius:20px;padding:5px 11px}
+  .backchip.show{display:inline-flex}
+  svg.graph{width:100%;height:100%;display:block;touch-action:none}
+
+  .node{cursor:pointer}
+  .node .bubble{--c:var(--faint);
+    fill:color-mix(in srgb,var(--c) 15%,transparent);stroke:var(--c);stroke-width:2;
+    transition:fill .35s,stroke .35s,r .35s}
+  .node.sel .bubble{stroke-width:3.5}
+  .node.sel .ring{opacity:1}
+  .ring{fill:none;stroke:var(--accent);stroke-width:1.5;opacity:0;stroke-dasharray:3 4}
+  .node .lbl{font:600 12px var(--font-ui);fill:var(--text);text-anchor:middle}
+  .node .sub{font:500 10px var(--font-mono);fill:var(--muted);text-anchor:middle;letter-spacing:.04em}
+  .node .satt{fill:var(--c);opacity:.55}
+  .state-build{--c:var(--accent)} .state-seed{--c:var(--seed)}
+  .state-pro{--c:var(--pro)} .state-amplify{--c:var(--amplify)}
+  .state-neutral{--c:var(--neutral)} .state-stall{--c:var(--stall)} .state-idle{--c:var(--faint)}
+  .state-idle .lbl{fill:var(--muted)}
+
+  .edge{stroke:var(--border-2);stroke-width:2;fill:none;transition:stroke .35s,stroke-width .35s}
+  .edge.active{stroke:var(--amplify);stroke-width:3;stroke-dasharray:7 6;animation:flow 1s linear infinite}
+  @keyframes flow{to{stroke-dashoffset:-26}}
+  @media (prefers-reduced-motion:reduce){.edge.active{animation:none}}
+
+  .zoomctl{position:absolute;left:14px;bottom:14px;display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid var(--border);border-radius:9px;overflow:hidden;box-shadow:var(--shadow)}
+  .zoomctl button{width:34px;height:32px;border:0;background:none;color:var(--text);cursor:pointer;font-size:16px}
+  .zoomctl button:hover{background:var(--panel-2)}
+  .zoomctl button+button{border-top:1px solid var(--border)}
+  .legend{position:absolute;right:14px;bottom:14px;display:flex;gap:12px;flex-wrap:wrap;
+    background:color-mix(in srgb,var(--panel) 80%,transparent);border:1px solid var(--border);
+    border-radius:9px;padding:8px 11px;backdrop-filter:blur(6px);font-size:10.5px;color:var(--muted)}
+  .legend b{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+
+  /* ---------- inspector ---------- */
+  .insp-title{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:650;margin-bottom:2px}
+  .insp-title .dotc{width:12px;height:12px;border-radius:50%;flex:none;
+    background:color-mix(in srgb,var(--c,var(--accent)) 30%,transparent);border:2px solid var(--c,var(--accent))}
+  .insp-tag{font:600 10px var(--font-mono);text-transform:uppercase;letter-spacing:.09em;color:var(--faint);margin-bottom:14px}
+  .field{display:flex;flex-direction:column;gap:3px;margin-bottom:9px}
+  .field label{font:600 9.5px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .field .val{font-size:12.5px;background:var(--panel-2);border:1px solid var(--border);
+    border-radius:7px;padding:7px 9px;color:var(--text)}
+  .reach{display:flex;gap:3px;align-items:center}
+  .reach i{width:14px;height:7px;border-radius:2px;background:var(--border-2)}
+  .reach i.on{background:var(--accent)}
+  .said{font-size:12.5px;line-height:1.5;color:var(--text);background:var(--panel-2);
+    border:1px solid var(--border);border-left:3px solid var(--c,var(--accent));border-radius:7px;padding:9px 11px}
+  .stancerow{display:flex;align-items:center;gap:7px;font-size:12.5px}
+  .pill{font:600 11px var(--font-ui);padding:3px 9px;border-radius:20px;
+    background:color-mix(in srgb,var(--c,var(--accent)) 16%,transparent);color:var(--c,var(--accent));
+    border:1px solid color-mix(in srgb,var(--c,var(--accent)) 40%,transparent)}
+  .arrow{color:var(--faint)}
+  .zoombtn{width:100%;margin-top:12px;padding:9px;border-radius:9px;border:1px solid var(--border-2);
+    background:var(--panel-2);color:var(--text);font:600 12px var(--font-ui);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:7px}
+  .zoombtn:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* ---------- scrubber ---------- */
+  .scrubber{border-top:1px solid var(--border);background:var(--panel-2);
+    padding:12px 18px;display:none;align-items:center;gap:16px}
+  .scrubber.show{display:flex}
+  .play{width:38px;height:38px;border-radius:50%;flex:none;border:0;cursor:pointer;
+    background:var(--accent);color:#fff;display:grid;place-items:center;box-shadow:var(--shadow)}
+  .play:hover{filter:brightness(1.08)}
+  .play .tri{width:0;height:0;border-left:11px solid #fff;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:3px}
+  .play .pause{display:flex;gap:3px}.play .pause span{width:3.5px;height:13px;background:#fff;border-radius:1px}
+  .track{flex:1}
+  .track-labels{display:flex;justify-content:space-between;font:600 10px var(--font-mono);
+    color:var(--faint);letter-spacing:.05em;margin-bottom:5px;text-transform:uppercase}
+  .track-labels span.now{color:var(--accent)}
+  input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:4px;
+    background:linear-gradient(90deg,var(--accent) var(--pct,0%),var(--inset) var(--pct,0%));cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:var(--panel);border:3px solid var(--accent);box-shadow:var(--shadow);cursor:grab}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;
+    background:var(--panel);border:3px solid var(--accent);cursor:grab}
+  .stepread{font:600 11px var(--font-mono);color:var(--muted);white-space:nowrap;min-width:74px;text-align:right}
+
+  /* tooltip */
+  #tip{position:fixed;z-index:50;pointer-events:none;opacity:0;transform:translateY(4px);
+    transition:opacity .12s;max-width:230px;background:#0f1220;color:#e7e9f2;
+    border:1px solid #2a3048;border-radius:9px;padding:8px 10px;font-size:11.5px;line-height:1.45;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #tip.show{opacity:1;transform:none}
+  #tip .who{font:700 10.5px var(--font-mono);color:#8b7dff;letter-spacing:.04em;margin-bottom:3px}
+
+  .foot{max-width:1360px;margin:10px auto 0;font-size:11px;color:var(--faint);text-align:center}
+  .foot b{color:var(--muted);font-weight:600}
+</style>
+
+<div class="stage">
+  <div class="app">
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="brand"><span class="dot"></span>Scenario Engine</div>
+      <div class="scenario">▸ <b>“How does tech twitter react to our launch?”</b></div>
+      <div class="modeswitch" id="modeswitch">
+        <button data-mode="build" class="on">Build</button>
+        <button data-mode="replay">Replay</button>
+      </div>
+      <div class="budget">Budget
+        <select id="budget"><option>quick · ~$0.40</option><option>standard · ~$3</option><option>deep · ~$18</option></select>
+      </div>
+      <button class="run" id="run"><span class="tri"></span>Run sim</button>
+    </div>
+
+    <!-- BODY -->
+    <div class="body">
+      <!-- LEFT RAIL -->
+      <div class="rail" id="leftRail"></div>
+
+      <!-- CANVAS -->
+      <div class="canvas-wrap">
+        <div class="canvas-top">
+          <span class="tag" id="canvasTag">Zoomed out · communities</span>
+          <span class="backchip" id="backchip">← back to communities</span>
+        </div>
+        <svg class="graph" id="graph" viewBox="0 0 960 560" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="zoomctl"><button id="zin" title="Zoom into selected community">＋</button><button id="zout" title="Zoom out">－</button></div>
+        <div class="legend" id="legend">
+          <span><b style="background:var(--pro)"></b>moved</span>
+          <span><b style="background:var(--amplify)"></b>amplifying</span>
+          <span><b style="background:var(--neutral)"></b>no move</span>
+          <span><b style="background:var(--stall)"></b>stalled</span>
+          <span><b style="background:var(--seed)"></b>seed</span>
+        </div>
+      </div>
+
+      <!-- INSPECTOR -->
+      <div class="rail right"><div class="rail-pad" id="inspector"></div></div>
+    </div>
+
+    <!-- SCRUBBER -->
+    <div class="scrubber" id="scrubber">
+      <button class="play" id="play"><span class="tri"></span></button>
+      <div class="track">
+        <div class="track-labels" id="trackLabels"></div>
+        <input type="range" id="range" min="0" max="6" value="0" step="1">
+      </div>
+      <div class="stepread" id="stepread">t0 · seed</div>
+    </div>
+  </div>
+  <div class="foot"><b>Interactive mockup</b> — no engine behind it. Toggle <b>Build/Replay</b>, click nodes, zoom a community into individuals, and drag the scrubber to watch the cascade form.</div>
+</div>
+<div id="tip"></div>
+
+<script>
+(function(){
+  "use strict";
+  var STEPS = 6; // 0..6
+  var stepNames = ["seed","","pick-up","amplify","","spread","settled"];
+
+  // ---- communities (zoomed-out nodes) ----
+  var communities = [
+    {id:"vc",     label:"VC / founders",  sub:"tier 1", x:250, y:150, r:46},
+    {id:"press",  label:"Tech press",     sub:"tier 1", x:340, y:330, r:56},
+    {id:"crypto", label:"Crypto twitter", sub:"tier 2", x:600, y:230, r:50},
+    {id:"forum",  label:"Niche forum",    sub:"tier 2", x:560, y:460, r:40},
+    {id:"suburb", label:"Suburban voters",sub:"tier 3", x:810, y:390, r:52}
+  ];
+  var edges = [
+    ["vc","press"],["vc","crypto"],["press","crypto"],["press","forum"],
+    ["crypto","suburb"],["crypto","forum"]
+  ];
+
+  // ---- per-step states (missing => idle) ----
+  var frames = [
+    {press:"seed"},
+    {press:"seed", vc:"pro"},
+    {press:"pro",  vc:"pro"},
+    {press:"pro",  vc:"pro", crypto:"amplify"},
+    {press:"pro",  vc:"pro", crypto:"amplify", forum:"stall"},
+    {press:"pro",  vc:"pro", crypto:"amplify", forum:"stall", suburb:"neutral"},
+    {press:"pro",  vc:"pro", crypto:"amplify", forum:"stall", suburb:"neutral"}
+  ];
+
+  // ---- profiles (build) & quotes/outcomes (replay) ----
+  var profiles = {
+    vc:    {role:"investor / founder", lean:"techno-libertarian", platform:"X threads", reach:5, tone:"hype", said:"this is the missing piece — sharing with the whole portfolio", flip:"backed it at t1", tip:"seeded directly"},
+    press: {role:"journalist", lean:"progressive", platform:"X + newsletter", reach:4, tone:"skeptical", said:"skeptical at first, but the numbers changed my mind — worth a look", flip:"skeptical → pro at t2", tip:"tipped by VC pick-up"},
+    crypto:{role:"influencer", lean:"mixed / mercenary", platform:"X", reach:5, tone:"hype", said:"ok this is actually bullish, the narrative writes itself", flip:"neutral → amplify at t3", tip:"tipped by tech press"},
+    forum: {role:"community", lean:"contrarian", platform:"forum", reach:2, tone:"jaded", said:"seen ten launches like this, not biting", flip:"stalled at t4", tip:"resisted crypto hype"},
+    suburb:{role:"mass segment", lean:"centrist", platform:"Facebook", reach:5, tone:"indifferent", said:"not sure this really matters to me", flip:"no real move", tip:"signal didn't reach"}
+  };
+
+  // ---- individuals inside each community (zoom) ----
+  var individuals = {
+    vc:    [{l:"Seed investor"},{l:"Solo founder"},{l:"Growth angel"},{l:"Skeptic LP",hold:true}],
+    press: [{l:"Senior journalist"},{l:"Site editor"},{l:"Newsletter writer"},{l:"Junior reporter",hold:true}],
+    crypto:[{l:"Big anon account"},{l:"Meme page"},{l:"Alpha caller"},{l:"Retail holder",hold:true}],
+    forum: [{l:"Mod"},{l:"Power user"},{l:"Lurker"}],
+    suburb:[{l:"Parent group"},{l:"Local page"},{l:"Commuter"},{l:"Retiree",hold:true}]
+  };
+
+  var state = {mode:"build", step:0, sel:"press", zoom:null, playing:false, timer:null};
+  var $ = function(s){return document.querySelector(s)};
+  var graph = $("#graph"), tip = $("#tip");
+  var SVGNS = "http://www.w3.org/2000/svg";
+
+  function el(tag, attrs){var e=document.createElementNS(SVGNS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);return e;}
+  function cById(id){for(var i=0;i<communities.length;i++)if(communities[i].id===id)return communities[i];}
+
+  function communityState(id){
+    if(state.mode==="build") return "build";
+    var f=frames[state.step]; return (f && f[id]) ? f[id] : "idle";
+  }
+  function individualState(parentId, idx, hold){
+    if(state.mode==="build") return "build";
+    var ps=communityState(parentId);
+    if(ps==="idle") return "idle";
+    if(hold) return (state.step>=STEPS)? ps : "neutral"; // holdout lags to the end
+    return ps;
+  }
+
+  // ---------- render graph ----------
+  function renderGraph(){
+    while(graph.firstChild) graph.removeChild(graph.firstChild);
+    if(state.zoom){ renderIndividuals(state.zoom); return; }
+
+    // edges
+    edges.forEach(function(e){
+      var a=cById(e[0]), b=cById(e[1]);
+      var line=el("path",{d:"M"+a.x+" "+a.y+" L"+b.x+" "+b.y,class:"edge","data-a":e[0],"data-b":e[1]});
+      graph.appendChild(line);
+    });
+    // nodes
+    communities.forEach(function(c){
+      var g=el("g",{class:"node state-"+communityState(c.id),"data-id":c.id, tabindex:"0"});
+      g.appendChild(el("circle",{class:"ring",cx:c.x,cy:c.y,r:c.r+8}));
+      g.appendChild(el("circle",{class:"bubble",cx:c.x,cy:c.y,r:c.r}));
+      // satellite hints of individuals
+      var n=(individuals[c.id]||[]).length;
+      for(var i=0;i<n;i++){var ang=(i/n)*Math.PI*2; g.appendChild(el("circle",{class:"satt",cx:c.x+Math.cos(ang)*(c.r*0.5),cy:c.y+Math.sin(ang)*(c.r*0.5),r:3}));}
+      var t1=el("text",{class:"lbl",x:c.x,y:c.y-c.r-14}); t1.textContent=c.label; g.appendChild(t1);
+      var t2=el("text",{class:"sub",x:c.x,y:c.y-c.r-2}); t2.textContent=c.sub; g.appendChild(t2);
+      if(c.id===state.sel) g.setAttribute("class",g.getAttribute("class")+" sel");
+      graph.appendChild(g);
+    });
+    updateEdges();
+  }
+
+  function renderIndividuals(pid){
+    var parent=cById(pid), people=individuals[pid]||[];
+    var cx=480, cy=280, R=170;
+    // center hub
+    var hub=el("g",{class:"node state-"+communityState(pid),"data-id":pid});
+    hub.appendChild(el("circle",{class:"bubble",cx:cx,cy:cy,r:34}));
+    var ht=el("text",{class:"sub",x:cx,y:cy+3}); ht.textContent=parent.label; hub.appendChild(ht);
+    // spokes + people
+    people.forEach(function(p,i){
+      var ang=(i/people.length)*Math.PI*2 - Math.PI/2;
+      var px=cx+Math.cos(ang)*R, py=cy+Math.sin(ang)*R;
+      graph.appendChild(el("path",{d:"M"+cx+" "+cy+" L"+px+" "+py,class:"edge"}));
+      var st=individualState(pid,i,p.hold);
+      var g=el("g",{class:"node state-"+st,"data-id":pid+":"+i,"data-person":p.l, tabindex:"0"});
+      g.appendChild(el("circle",{class:"ring",cx:px,cy:py,r:32}));
+      g.appendChild(el("circle",{class:"bubble",cx:px,cy:py,r:24}));
+      var tl=el("text",{class:"lbl",x:px,y:py+42}); tl.textContent=p.l; g.appendChild(tl);
+      graph.appendChild(g);
+    });
+    graph.appendChild(hub);
+  }
+
+  function updateEdges(){
+    if(state.zoom) return;
+    var qs=graph.querySelectorAll(".edge");
+    qs.forEach(function(line){
+      var a=line.getAttribute("data-a"), b=line.getAttribute("data-b");
+      var sa=communityState(a), sb=communityState(b);
+      var active = state.mode==="replay" && sa!=="idle" && sb!=="idle" && !(sa==="stall"&&sb==="idle");
+      line.classList.toggle("active", active);
+    });
+  }
+
+  function refreshStates(){
+    graph.querySelectorAll(".node").forEach(function(g){
+      var id=g.getAttribute("data-id");
+      var st;
+      if(id.indexOf(":")>-1){var pr=id.split(":");st=individualState(pr[0],+pr[1], (individuals[pr[0]][+pr[1]]||{}).hold);}
+      else st=communityState(id);
+      g.setAttribute("class","node state-"+st+(id===state.sel?" sel":""));
+    });
+    updateEdges();
+  }
+
+  // ---------- left rail ----------
+  function renderLeftRail(){
+    var r=$("#leftRail");
+    if(state.mode==="build"){
+      var comm=communities.map(function(c){return '<div class="chip" data-pick="'+c.id+'"><span class="swatch"></span>'+c.label+'</div>';}).join("");
+      r.innerHTML='<div class="rail-pad">'
+        +'<p class="eyebrow">Library</p><p class="hint">Drag onto the canvas to add who you want to simulate.</p>'
+        +'<div class="group-label">Communities · regions</div>'+comm
+        +'<div class="group-label">Shapers · archetypes</div>'
+        +'<div class="chip small" data-pick="press"><span class="swatch"></span>Journalist · Dem · tech</div>'
+        +'<div class="chip small" data-pick="vc"><span class="swatch"></span>Investor · founder</div>'
+        +'<div class="chip small" data-pick="crypto"><span class="swatch"></span>Big anon account</div>'
+        +'<button class="newbtn">+ New shaper</button>'
+        +'</div>';
+    } else {
+      r.innerHTML='<div class="rail-pad">'
+        +'<p class="eyebrow">Verdict</p>'
+        +'<div class="verdict-card"><div class="verdict-head">'
+          +'<div class="verdict-out">Spreads <span style="color:var(--pro)">✓</span></div>'
+          +'<div class="verdict-sub">within tech — stalls beyond it</div></div>'
+          +'<div class="conf"><div class="conf-label"><span>Confidence</span><span>78%</span></div>'
+          +'<div class="conf-bar"><i></i></div></div></div>'
+        +'<p class="eyebrow">Who moved whom</p>'
+        +'<ul class="flow">'
+          +'<li class="good">Seeded at <b>Tech press</b></li>'
+          +'<li class="good"><b>VC / founders</b> pick it up → press flips pro</li>'
+          +'<li class="good"><b>Crypto twitter</b> amplifies the narrative</li>'
+          +'<li class="bad"><b>Niche forum</b> ignores it — stalled</li>'
+          +'<li><b>Suburban voters</b> — no real move</li>'
+        +'</ul></div>';
+    }
+  }
+
+  // ---------- inspector ----------
+  function reachBars(n){var s="";for(var i=0;i<5;i++)s+='<i class="'+(i<n?"on":"")+'"></i>';return '<span class="reach">'+s+'</span>';}
+  function renderInspector(){
+    var box=$("#inspector"), id=state.sel;
+    var isPerson = id.indexOf(":")>-1;
+    var baseId = isPerson? id.split(":")[0] : id;
+    var p=profiles[baseId]||profiles.press;
+    var label = isPerson ? (individuals[baseId][+id.split(":")[1]]||{}).l : cById(baseId).label;
+    var st = isPerson ? individualState(baseId,+id.split(":")[1],(individuals[baseId][+id.split(":")[1]]||{}).hold) : communityState(baseId);
+    var cvar = "--c:var(--"+ (st==="build"?"accent":st) +")";
+
+    if(state.mode==="build"){
+      box.innerHTML='<div style="'+cvar+'">'
+        +'<div class="insp-title"><span class="dotc"></span>'+label+'</div>'
+        +'<div class="insp-tag">Profile · archetype</div>'
+        +'<div class="field"><label>Role</label><div class="val">'+p.role+'</div></div>'
+        +'<div class="field"><label>Lean</label><div class="val">'+p.lean+'</div></div>'
+        +'<div class="field"><label>Platform</label><div class="val">'+p.platform+'</div></div>'
+        +'<div class="field"><label>Reach</label><div class="val">'+reachBars(p.reach)+'</div></div>'
+        +'<div class="field"><label>Tone</label><div class="val">'+p.tone+'</div></div>'
+        + (!isPerson && individuals[baseId] ? '<button class="zoombtn" id="zoombtn">⊕ Zoom into '+individuals[baseId].length+' individuals</button>' : '')
+        +'</div>';
+    } else {
+      var stanceLabel={seed:"origin",pro:"PRO",amplify:"AMPLIFY",neutral:"no move",stall:"STALLED",idle:"not reached"}[st]||st;
+      box.innerHTML='<div style="'+cvar+'">'
+        +'<div class="insp-title"><span class="dotc"></span>'+label+'</div>'
+        +'<div class="insp-tag">State @ step t'+state.step+'</div>'
+        +'<div class="field"><label>Stance</label><div class="stancerow"><span class="pill">'+stanceLabel+'</span></div></div>'
+        +'<div class="field"><label>Trajectory</label><div class="val">'+p.flip+'</div></div>'
+        +'<div class="field"><label>Tipped by</label><div class="val">'+p.tip+'</div></div>'
+        +'<div class="field"><label>Said</label><div class="said">“'+p.said+'”</div></div>'
+        + (!isPerson && individuals[baseId] ? '<button class="zoombtn" id="zoombtn">⊕ Zoom into '+individuals[baseId].length+' individuals</button>' : '')
+        +'</div>';
+    }
+    var zb=$("#zoombtn"); if(zb) zb.onclick=function(){ setZoom(baseId); };
+  }
+
+  // ---------- scrubber ----------
+  function renderTrackLabels(){
+    var wrap=$("#trackLabels"), s="";
+    for(var i=0;i<=STEPS;i++){ s+='<span class="'+(i===state.step?"now":"")+'">'+(stepNames[i]?("t"+i):"·")+'</span>'; }
+    wrap.innerHTML=s;
+  }
+  function setStep(n){
+    state.step=Math.max(0,Math.min(STEPS,n));
+    $("#range").value=state.step;
+    $("#range").style.setProperty("--pct",(state.step/STEPS*100)+"%");
+    $("#stepread").textContent="t"+state.step+(stepNames[state.step]?" · "+stepNames[state.step]:"");
+    renderTrackLabels(); refreshStates(); renderInspector();
+  }
+
+  // ---------- modes / zoom ----------
+  function setMode(m){
+    state.mode=m; state.playing=false; stopTimer(); setPlayIcon();
+    document.querySelectorAll("#modeswitch button").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-mode")===m);});
+    $("#scrubber").classList.toggle("show",m==="replay");
+    $("#legend").style.display = "flex";
+    renderLeftRail(); renderGraph(); refreshStates(); renderInspector();
+    if(m==="replay") setStep(state.step);
+  }
+  function setZoom(id){
+    state.zoom=id; state.sel=id;
+    $("#backchip").classList.add("show");
+    $("#canvasTag").textContent="Zoomed in · "+cById(id).label+" · individuals";
+    renderGraph(); refreshStates(); renderInspector();
+  }
+  function clearZoom(){
+    state.zoom=null; $("#backchip").classList.remove("show");
+    $("#canvasTag").textContent="Zoomed out · communities";
+    renderGraph(); refreshStates(); renderInspector();
+  }
+
+  // ---------- play ----------
+  function setPlayIcon(){
+    $("#play").innerHTML = state.playing ? '<span class="pause"><span></span><span></span></span>' : '<span class="tri"></span>';
+  }
+  function stopTimer(){ if(state.timer){clearInterval(state.timer);state.timer=null;} }
+  function play(){
+    if(state.mode!=="replay") setMode("replay");
+    if(state.playing){ state.playing=false; stopTimer(); setPlayIcon(); return; }
+    if(state.step>=STEPS) setStep(0);
+    state.playing=true; setPlayIcon();
+    state.timer=setInterval(function(){
+      if(state.step>=STEPS){ state.playing=false; stopTimer(); setPlayIcon(); return; }
+      setStep(state.step+1);
+    },900);
+  }
+
+  // ---------- tooltip ----------
+  function showTip(target, evt){
+    var id=target.getAttribute("data-id"); if(!id) return;
+    var isPerson=id.indexOf(":")>-1, baseId=isPerson?id.split(":")[0]:id;
+    var p=profiles[baseId]||profiles.press;
+    var name=isPerson? target.getAttribute("data-person") : cById(baseId).label;
+    if(state.mode==="replay"){
+      var st=isPerson?individualState(baseId,+id.split(":")[1],(individuals[baseId][+id.split(":")[1]]||{}).hold):communityState(baseId);
+      if(st==="idle"){ tip.innerHTML='<div class="who">'+name+'</div>not reached yet'; }
+      else tip.innerHTML='<div class="who">'+name+' · t'+state.step+'</div>“'+p.said+'”';
+    } else {
+      tip.innerHTML='<div class="who">'+name+'</div>'+p.role+' · '+p.lean;
+    }
+    tip.classList.add("show"); moveTip(evt);
+  }
+  function moveTip(evt){
+    var x=evt.clientX+14, y=evt.clientY+14;
+    if(x+240>window.innerWidth) x=evt.clientX-240;
+    tip.style.left=x+"px"; tip.style.top=y+"px";
+  }
+
+  // ---------- events ----------
+  graph.addEventListener("click",function(e){
+    var g=e.target.closest(".node"); if(!g) return;
+    state.sel=g.getAttribute("data-id");
+    refreshStates(); renderInspector();
+  });
+  graph.addEventListener("mouseover",function(e){var g=e.target.closest(".node"); if(g) showTip(g,e);});
+  graph.addEventListener("mousemove",function(e){ if(tip.classList.contains("show")) moveTip(e); });
+  graph.addEventListener("mouseout",function(e){ if(!e.relatedTarget||!e.relatedTarget.closest(".node")) tip.classList.remove("show"); });
+
+  document.querySelectorAll("#modeswitch button").forEach(function(b){
+    b.onclick=function(){ setMode(b.getAttribute("data-mode")); };
+  });
+  $("#run").onclick=function(){ setMode("replay"); setStep(0); play(); };
+  $("#play").onclick=play;
+  $("#range").oninput=function(){ state.playing=false; stopTimer(); setPlayIcon(); setStep(+this.value); };
+  $("#zin").onclick=function(){ if(!state.zoom && state.sel && cById(state.sel)) setZoom(state.sel); };
+  $("#zout").onclick=clearZoom;
+  $("#backchip").onclick=clearZoom;
+  $("#leftRail").addEventListener("click",function(e){
+    var c=e.target.closest("[data-pick]"); if(!c) return;
+    var id=c.getAttribute("data-pick"); if(state.zoom) clearZoom();
+    state.sel=id; refreshStates(); renderInspector();
+  });
+
+  // ---------- init ----------
+  renderLeftRail(); renderGraph(); renderInspector(); renderTrackLabels();
+  $("#range").max=STEPS;
+})();
+</script>
