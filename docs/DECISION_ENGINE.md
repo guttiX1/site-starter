@@ -194,6 +194,88 @@ animates live.
 
 ---
 
+## The run pipeline — where a simulation actually executes
+
+A run is **not** a request/response. It takes minutes and costs money, so it's an
+**async job** with live progress. The elegant part: the web app and the heavy
+Python worker **never call each other** — they meet in SpacetimeDB.
+
+### The components and who does what
+```
+Next.js (Vercel)      the canvas UI + thin API. Talks ONLY to SpacetimeDB.
+MCP server            the tool surface. create_scenario / run_simulation / …
+SpacetimeDB           shared state + the meeting point. Everyone subscribes.
+Worker (Python)       heavy lifter. Runs MiroFish. Talks ONLY to SpacetimeDB.
+MiroFish / OASIS      the actual simulation (LLM-driven agents).
+LLM API               the real cost centre.
+```
+> Why this shape: Vercel serverless can't run a 5-minute Python sim, and we don't
+> want the UI holding a connection open for minutes. So the worker lives
+> elsewhere (Fly.io / Railway / a VM / your own box) and the two sides are
+> decoupled through SpacetimeDB. Neither needs to know where the other is.
+
+### The flow, step by step
+```
+1. Agent/UI → MCP: run_simulation(scenario_id, tier)
+2. MCP → reducer submit_run  →  run row {status:"queued"}      (returns run_id NOW)
+3. Worker is subscribed to `run`. It claims the job atomically
+      (reducer flips queued→claimed w/ worker_id; only one worker wins)
+4. status:"building_graph"  — check persona_graph cache; reuse if fresh,
+      else build the GraphRAG from seeds and store the blob
+5. status:"simulating"      — configure OASIS agents from community/persona rows,
+      sized by tier. THEN run the loop, and after each round:
+         emit a batch of `frame` rows  (reducer record_frame) + bump progress
+      ← this per-round emit is what streams the scrubber live
+6. status:"summarizing"     — ReportAgent → verdict row (outcome, confidence,
+      cascade_json)
+7. status:"done"
+   The canvas was subscribed to `frame` + `verdict` the whole time and animated
+   as rows arrived. No polling.
+```
+Status lifecycle: `queued → claimed → building_graph → simulating → summarizing →
+done | failed`. Keep `run.progress` (0–1) so the UI shows a real bar.
+
+### The one hard part: getting per-step frames out of MiroFish
+MiroFish natively emits a **final** report + `verdict.json` — **not** a per-step
+timeline. But the scrubber needs every node's state at each step. Three ways to
+get it, in order of preference:
+
+- **A — hook the loop (target).** OASIS runs in discrete rounds; extend it with a
+  per-round callback that snapshots agent stances + utterances and writes frames.
+  It's AGPL and open, so this is a fair-game patch. Cleanest, truly live.
+- **B — segment + snapshot.** Run the sim in short segments, snapshot between
+  them. Coarser timeline, no deep patching.
+- **C — post-hoc reconstruct (v1 fallback).** Let it finish, then parse the
+  interaction log (who posted what, when) and rebuild frames after the fact. Not
+  live, but ships without touching MiroFish internals.
+
+**Plan: build C first to prove the loop, move to A for the real product.** Flag
+this now because if we design as if frames come free, the scrubber becomes
+impossible to add later.
+
+### Cost & tiers (the LLM bill is the whole cost)
+| Tier | Agents | Rounds | Model mix | ~Cost |
+|------|-------:|-------:|-----------|------:|
+| `quick`    | dozens    | few  | small model only            | cents |
+| `standard` | hundreds  | more | small crowd + smart summary | ~$3 |
+| `deep`     | thousands | many | bigger crowd + smart summary| ~$18 |
+
+- Estimate cost up front (`tier × agents × rounds × model price`), show it before
+  Run, and enforce a **hard cap** — a run can never silently blow past its tier.
+- **Reuse** the persona graph across runs; **share** identical (scenario, tier,
+  graph_version) results instead of re-running. This is what keeps it a $5 tool.
+
+### Failure & fairness
+- **Atomic claim** so two workers never run the same job.
+- **Dedup**: an identical fresh run returns the cached result, no new spend.
+- **Frame volume**: nodes × steps. Community-level frames are tiny; individual
+  traces (thousands of agents) are big — store those sampled/compressed and load
+  a node's detailed trace only when someone drills in.
+- On crash → `status:"failed"` + reason; the UI offers a re-run; no half-charged
+  silent hangs.
+
+---
+
 ## First milestone (thin end-to-end slice)
 
 Don't build all four layers at once. Prove the loop with the cheapest possible
@@ -229,6 +311,8 @@ Decide this early. It shapes the whole business, not just the code.
 - [x] Named the primitive and the three layers
 - [x] Bring-your-own-agent (MCP server) + influence-graph persona model
 - [x] Canvas UX: semantic zoom (communities ↔ individuals), build + replay modes
+- [x] Interactive mockup of the canvas (`docs/mockup.html`)
+- [x] Run pipeline: async job via SpacetimeDB, worker topology, frame-emit strategy
 - [ ] Pick the graph rendering lib (semantic zoom + replay animation)
 - [ ] Stub the MCP tool surface (incl. `define_persona`)
 - [ ] Stand up SpacetimeDB tables + reducers (incl. `frame` timeline for replay)
