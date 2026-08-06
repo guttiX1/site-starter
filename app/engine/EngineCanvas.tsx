@@ -3,7 +3,8 @@
 import { useEffect, useRef } from "react";
 import "./engine.css";
 import {
-  world, StubEngine, type Engine, type Frame, type NodeState, type BudgetTier,
+  world, StubEngine, saveWorld, hydrateWorld, resetWorld, exportWorld, importWorld,
+  type Engine, type Frame, type NodeState, type BudgetTier,
   type RunState, type Verdict, type Mood,
 } from "./engine";
 
@@ -73,6 +74,7 @@ export default function EngineCanvas() {
   useEffect(() => {
     if (!rootRef.current) return;
     const root: HTMLDivElement = rootRef.current; // effect runs post-mount; ref is set
+    hydrateWorld(); // restore any saved scenario before first render
     root.innerHTML = APP_HTML;
     const engine: Engine = new StubEngine();
 
@@ -107,6 +109,7 @@ export default function EngineCanvas() {
       profiles[id] = { role: "", lean: "", platform: "", reach: 3, tone: "", said: "they react to it" };
       if (!world.seedId) world.seedId = id;
       S.sel = id; S.zoom = null;
+      saveWorld();
       renderGraph(); refreshStates(); renderInspector(); renderLeftRail();
     }
     function deleteCommunity(id: string) {
@@ -116,6 +119,7 @@ export default function EngineCanvas() {
       delete profiles[id];
       if (world.seedId === id) world.seedId = communities[0]?.id ?? "";
       S.sel = communities[0]?.id ?? ""; S.zoom = null;
+      saveWorld();
       renderGraph(); refreshStates(); renderInspector(); renderLeftRail();
     }
     function toggleEdge(a: string, b: string) {
@@ -123,7 +127,31 @@ export default function EngineCanvas() {
       const i = edges.findIndex((e) => e.a === a && e.b === b);
       if (i >= 0) edges.splice(i, 1);
       else edges.push({ a, b });
+      saveWorld();
       renderGraph(); refreshStates();
+    }
+    function refreshAll() {
+      S.sel = communities[0]?.id ?? ""; S.zoom = null;
+      renderGraph(); refreshStates(); renderInspector(); renderLeftRail();
+    }
+    function resetScenario() { resetWorld(); refreshAll(); }
+    function exportScenario() {
+      const blob = new Blob([exportWorld()], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "scenario.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    function importScenario() {
+      const inp = document.createElement("input");
+      inp.type = "file"; inp.accept = "application/json,.json";
+      inp.onchange = () => {
+        const f = inp.files?.[0];
+        if (!f) return;
+        f.text().then((t) => { if (importWorld(t)) refreshAll(); });
+      };
+      inp.click();
     }
     function svgPoint(evt: PointerEvent) {
       const pt = graph.createSVGPoint();
@@ -227,10 +255,18 @@ export default function EngineCanvas() {
         const comm = communities.map((c) => `<div class="chip" data-pick="${c.id}"><span class="swatch"></span>${c.label}</div>`).join("");
         r.innerHTML = `<div class="rail-pad"><p class="eyebrow">Library</p>
           <p class="hint">Add groups, connect them, set a seed, then Run. Drag to arrange; click an arrow to remove it.</p>
-          <button class="chip" data-el="addcomm" style="justify-content:center;border-style:dashed;margin-bottom:12px">+ Add community</button>
+          <button class="chip" data-el="addcomm" style="justify-content:center;border-style:dashed;margin-bottom:8px">+ Add community</button>
+          <div style="display:flex;gap:6px;margin-bottom:12px">
+            <button class="chip" data-el="reset" style="flex:1;justify-content:center;margin:0;font-size:11px">⟲ Reset</button>
+            <button class="chip" data-el="export" style="flex:1;justify-content:center;margin:0;font-size:11px">↓ Export</button>
+            <button class="chip" data-el="import" style="flex:1;justify-content:center;margin:0;font-size:11px">↑ Import</button>
+          </div>
           <div class="group-label">Communities · regions</div>${comm || '<div class="empty">None yet — add one.</div>'}</div>`;
         const ab = q<HTMLButtonElement>("addcomm");
         if (ab) ab.onclick = addCommunity;
+        const rb = q<HTMLButtonElement>("reset"); if (rb) rb.onclick = resetScenario;
+        const eb = q<HTMLButtonElement>("export"); if (eb) eb.onclick = exportScenario;
+        const ib = q<HTMLButtonElement>("import"); if (ib) ib.onclick = importScenario;
       } else {
         const st = S.run?.status ?? "queued";
         const pct = Math.round((S.run?.progress ?? 0) * 100);
@@ -288,7 +324,7 @@ export default function EngineCanvas() {
           </div>${zoomBtn}</div>`;
         const write = (sel: string, fn: (v: string) => void) => {
           const inp = box.querySelector(`[data-edit="${sel}"]`) as HTMLInputElement | HTMLSelectElement | null;
-          if (inp) inp.onchange = () => fn(inp.value);
+          if (inp) inp.onchange = () => { fn(inp.value); saveWorld(); };
         };
         write("label", (v) => { comm.label = v || "Unnamed"; renderGraph(); refreshStates(); renderLeftRail(); });
         write("role", (v) => { p.role = v; });
@@ -299,7 +335,7 @@ export default function EngineCanvas() {
         write("mood", (v) => { comm.mood = v as Mood; });
         write("tier", (v) => { comm.tier = +v; comm.sub = `tier ${v}`; renderGraph(); refreshStates(); });
         const sb = box.querySelector('[data-el="seedbtn"]') as HTMLElement | null;
-        if (sb) sb.onclick = () => { world.seedId = baseId; renderGraph(); refreshStates(); renderInspector(); };
+        if (sb) sb.onclick = () => { world.seedId = baseId; saveWorld(); renderGraph(); refreshStates(); renderInspector(); };
         const lb = box.querySelector('[data-el="linkbtn"]') as HTMLElement | null;
         if (lb) lb.onclick = () => {
           S.linking = S.linking === baseId ? null : baseId;
@@ -456,7 +492,7 @@ export default function EngineCanvas() {
       renderGraph(); refreshStates();
     });
     const endDrag = (e: PointerEvent) => {
-      if (S.dragId) { try { graph.releasePointerCapture(e.pointerId); } catch { /* ignore */ } }
+      if (S.dragId) { try { graph.releasePointerCapture(e.pointerId); } catch { /* ignore */ } saveWorld(); }
       S.dragId = null;
       if (S.dragMoved) renderInspector();
     };

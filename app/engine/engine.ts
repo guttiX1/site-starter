@@ -60,6 +60,49 @@ export const world = {
   } as Record<string, Individual[]>,
 };
 
+// --- persistence (localStorage + export/import) ---------------------------
+// The component destructures world.communities/edges/profiles by reference, so
+// these apply changes IN PLACE (never reassign the arrays/objects).
+const STORAGE_KEY = "scenario-engine.world.v1";
+
+function snapshot() {
+  return { seedId: world.seedId, communities: world.communities, edges: world.edges, profiles: world.profiles };
+}
+function applyWorld(d: Partial<ReturnType<typeof snapshot>>) {
+  if (d.seedId !== undefined) world.seedId = d.seedId;
+  if (d.communities) { world.communities.length = 0; d.communities.forEach((c) => world.communities.push(c)); }
+  if (d.edges) { world.edges.length = 0; d.edges.forEach((e) => world.edges.push(e)); }
+  if (d.profiles) {
+    Object.keys(world.profiles).forEach((k) => delete world.profiles[k]);
+    Object.assign(world.profiles, d.profiles);
+  }
+}
+// pristine defaults captured at import, before any edit or hydrate
+const DEFAULT_JSON = JSON.stringify(snapshot());
+
+export function saveWorld(): void {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot())); } catch { /* ignore */ }
+}
+export function hydrateWorld(): boolean {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    applyWorld(JSON.parse(raw));
+    return true;
+  } catch { return false; }
+}
+export function resetWorld(): void { applyWorld(JSON.parse(DEFAULT_JSON)); saveWorld(); }
+export function exportWorld(): string { return JSON.stringify(snapshot(), null, 2); }
+export function importWorld(json: string): boolean {
+  try {
+    const d = JSON.parse(json);
+    if (!Array.isArray(d.communities)) return false;
+    applyWorld(d);
+    saveWorld();
+    return true;
+  } catch { return false; }
+}
+
 const moodState = (mood: Mood, tier: number): NodeState => {
   if (mood === "contrarian") return "stall";
   if (mood === "mass" || tier >= 3) return "neutral";
