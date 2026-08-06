@@ -3,10 +3,12 @@
 import { useEffect, useRef } from "react";
 import "./engine.css";
 import {
-  communities, edges, profiles, individuals, STEP_NAMES, TOTAL_STEPS,
-  StubEngine, type Engine, type Frame, type NodeState, type BudgetTier,
-  type RunState, type Verdict,
+  world, StubEngine, type Engine, type Frame, type NodeState, type BudgetTier,
+  type RunState, type Verdict, type Mood,
 } from "./engine";
+
+const { communities, edges, profiles, individuals } = world;
+const MOODS: Mood[] = ["open", "amplifier", "contrarian", "mass"];
 
 const SVGNS = "http://www.w3.org/2000/svg";
 // "build" is a UI-only visual state (all nodes tinted with the accent in Build
@@ -57,7 +59,7 @@ const APP_HTML = `
     <button class="play" data-el="play"><span class="tri"></span></button>
     <div class="track">
       <div class="track-labels" data-el="trackLabels"></div>
-      <input type="range" data-el="range" min="0" max="${TOTAL_STEPS}" value="0" step="1">
+      <input type="range" data-el="range" min="0" max="6" value="0" step="1">
     </div>
     <div class="stepread" data-el="stepread">t0 · seed</div>
   </div>
@@ -104,7 +106,7 @@ export default function EngineCanvas() {
       if (S.mode === "build") return "build";
       const ps = communityState(parent);
       if (ps === "idle") return "idle";
-      if (hold) return S.step >= TOTAL_STEPS ? ps : "neutral";
+      if (hold) return S.step >= S.maxStep ? ps : "neutral";
       return ps;
     };
 
@@ -127,6 +129,10 @@ export default function EngineCanvas() {
         }
         const t1 = el("text", { class: "lbl", x: c.x, y: c.y - c.r - 14 }); t1.textContent = c.label; g.appendChild(t1);
         const t2 = el("text", { class: "sub", x: c.x, y: c.y - c.r - 2 }); t2.textContent = c.sub; g.appendChild(t2);
+        if (c.id === world.seedId) {
+          const seed = el("text", { class: "sub", x: c.x, y: c.y + 4, fill: "var(--seed)" });
+          seed.textContent = "✸ seed"; g.appendChild(seed);
+        }
         graph.appendChild(g);
       });
       updateEdges();
@@ -216,22 +222,43 @@ export default function EngineCanvas() {
       const zoomBtn = !isPerson && individuals[baseId]
         ? `<button class="chip" data-el="zoombtn" style="justify-content:center;margin-top:12px">⊕ Zoom into ${individuals[baseId].length} individuals</button>` : "";
       if (S.mode === "build") {
+        const comm = cById(baseId)!;
+        const isSeed = world.seedId === baseId;
+        const moodOpts = MOODS.map((m) => `<option value="${m}"${comm.mood === m ? " selected" : ""}>${m}</option>`).join("");
+        const tierOpts = [1, 2, 3].map((t) => `<option value="${t}"${comm.tier === t ? " selected" : ""}>tier ${t}</option>`).join("");
         box.innerHTML = `<div style="${cvar}">
           <div class="insp-title"><span class="dotc"></span>${label}</div>
-          <div class="insp-tag">Profile · archetype</div>
-          <div class="field"><label>Role</label><div class="val">${p.role}</div></div>
-          <div class="field"><label>Lean</label><div class="val">${p.lean}</div></div>
-          <div class="field"><label>Platform</label><div class="val">${p.platform}</div></div>
-          <div class="field"><label>Reach</label><div class="val">${reachBars(p.reach)}</div></div>
-          <div class="field"><label>Tone</label><div class="val">${p.tone}</div></div>${zoomBtn}</div>`;
+          <div class="insp-tag">Profile · editable · drives the sim</div>
+          <div class="field"><label>Role</label><input class="val" data-edit="role" value="${p.role}"></div>
+          <div class="field"><label>Lean</label><input class="val" data-edit="lean" value="${p.lean}"></div>
+          <div class="field"><label>Platform</label><input class="val" data-edit="platform" value="${p.platform}"></div>
+          <div class="field"><label>Reach (0–5)</label><input class="val" data-edit="reach" type="number" min="0" max="5" value="${p.reach}"></div>
+          <div class="field"><label>Tone</label><input class="val" data-edit="tone" value="${p.tone}"></div>
+          <div class="field"><label>Behaviour (mood)</label><select class="val" data-edit="mood">${moodOpts}</select></div>
+          <div class="field"><label>Influence tier</label><select class="val" data-edit="tier">${tierOpts}</select></div>
+          <button class="chip" data-el="seedbtn" style="justify-content:center;margin-top:4px">${isSeed ? "✸ seeds the scenario" : "Set as seed"}</button>${zoomBtn}</div>`;
+        const write = (sel: string, fn: (v: string) => void) => {
+          const inp = box.querySelector(`[data-edit="${sel}"]`) as HTMLInputElement | HTMLSelectElement | null;
+          if (inp) inp.onchange = () => fn(inp.value);
+        };
+        write("role", (v) => { p.role = v; });
+        write("lean", (v) => { p.lean = v; });
+        write("platform", (v) => { p.platform = v; });
+        write("tone", (v) => { p.tone = v; });
+        write("reach", (v) => { p.reach = Math.max(0, Math.min(5, +v || 0)); });
+        write("mood", (v) => { comm.mood = v as Mood; });
+        write("tier", (v) => { comm.tier = +v; comm.sub = `tier ${v}`; renderGraph(); refreshStates(); });
+        const sb = box.querySelector('[data-el="seedbtn"]') as HTMLElement | null;
+        if (sb) sb.onclick = () => { world.seedId = baseId; renderGraph(); refreshStates(); renderInspector(); };
       } else {
         const stanceLabel: Record<string, string> = { seed: "origin", pro: "PRO", amplify: "AMPLIFY", neutral: "no move", stall: "STALLED", idle: "not reached" };
+        const comm = cById(baseId)!;
         box.innerHTML = `<div style="${cvar}">
           <div class="insp-title"><span class="dotc"></span>${label}</div>
           <div class="insp-tag">State @ step t${S.step}</div>
           <div class="field"><label>Stance</label><div><span class="pill">${stanceLabel[st] || st}</span></div></div>
-          <div class="field"><label>Trajectory</label><div class="val">${p.flip}</div></div>
-          <div class="field"><label>Tipped by</label><div class="val">${p.tip}</div></div>
+          <div class="field"><label>Behaviour</label><div class="val">${comm.mood} · tier ${comm.tier}</div></div>
+          <div class="field"><label>Reach</label><div class="val">${reachBars(p.reach)}</div></div>
           <div class="field"><label>Said</label><div class="said">“${p.said}”</div></div>${zoomBtn}</div>`;
       }
       const zb = box.querySelector('[data-el="zoombtn"]') as HTMLElement | null;
@@ -241,16 +268,18 @@ export default function EngineCanvas() {
     // ---------- scrubber ----------
     function renderTrackLabels() {
       const wrap = q<HTMLDivElement>("trackLabels");
+      const n = Math.max(1, S.maxStep);
       let s = "";
-      for (let i = 0; i <= TOTAL_STEPS; i++) s += `<span class="${i === S.step ? "now" : ""}">${STEP_NAMES[i] ? "t" + i : "·"}</span>`;
+      for (let i = 0; i <= n; i++) s += `<span class="${i === S.step ? "now" : ""}">t${i}</span>`;
       wrap.innerHTML = s;
     }
     function setStep(n: number) {
-      S.step = Math.max(0, Math.min(TOTAL_STEPS, n));
+      S.step = Math.max(0, Math.min(S.maxStep, n));
+      const denom = Math.max(1, S.maxStep);
       const range = q<HTMLInputElement>("range");
       range.value = String(S.step);
-      range.style.setProperty("--pct", (S.step / TOTAL_STEPS) * 100 + "%");
-      q<HTMLDivElement>("stepread").textContent = `t${S.step}${STEP_NAMES[S.step] ? " · " + STEP_NAMES[S.step] : ""}`;
+      range.style.setProperty("--pct", (S.step / denom) * 100 + "%");
+      q<HTMLDivElement>("stepread").textContent = `t${S.step} / t${S.maxStep}`;
       renderTrackLabels(); refreshStates(); renderInspector();
     }
 
@@ -304,7 +333,7 @@ export default function EngineCanvas() {
             framesByStep.get(step)!.set(f.node_ref.replace("community:", ""), f.state);
             if (step > S.maxStep) S.maxStep = step;
           });
-          q<HTMLInputElement>("range").max = String(TOTAL_STEPS);
+          q<HTMLInputElement>("range").max = String(Math.max(1, S.maxStep));
           if (S.follow) setStep(S.maxStep); else refreshStates();
         },
         (v) => { S.verdict = v; renderLeftRail(); },
