@@ -25,12 +25,18 @@ Prove the plumbing with a stub that streams frames like a real worker.
 - Still TODO in M0 proper: stand up the actual SpacetimeDB instance + generate
   bindings (needs the `spacetime` CLI, not available in the planning sandbox).
 
-## M1 — Real sim, cheap, post-hoc frames · ~2–3 days
-Swap the stub for MiroFish in cheap mode.
-- Worker runs MiroFish `quick` tier (dozens of agents, small model).
-- Use **frame strategy C**: let it finish, parse its log, reconstruct `frame`s.
-- Cache the persona graph; enforce the hard cost cap.
-- ✅ One real prediction for one scenario, for cents.
+## M1 — Real sim, cheap, post-hoc frames · scaffold ready 🟡
+Swap the stub for a real DB + MiroFish.
+- 🟡 `SpacetimeEngine.ts` (`spacetime/client/`) — real engine client, same
+  `Engine` interface as the stub. Needs `spacetime generate` bindings to activate.
+- 🟡 Python worker (`spacetime/worker/`) — claims runs, streams frames, writes
+  verdicts over SpacetimeDB's HTTP API; enforces per-tier hard caps. Ships with a
+  built-in heuristic (`USE_MIROFISH=0`) so the whole loop runs against a real DB
+  with **zero LLM spend** before MiroFish is wired.
+- ⬜ Implement `run_mirofish()` — GraphRAG build/cache, OASIS agents at `quick`
+  tier, **frame strategy C** (finish → parse log → reconstruct frames).
+- ⬜ Needs from owner: `LLM_API_KEY`, a cloned MiroFish at `MIROFISH_PATH`.
+- ✅ target: one real prediction for one scenario, for cents.
 
 ## M2 — MCP server · ~1–2 days
 Expose the tool contracts so any agent can drive it.

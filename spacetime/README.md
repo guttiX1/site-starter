@@ -57,6 +57,39 @@ SELECT * FROM run WHERE status = 'Queued';
 The worker reacts to inserts here, calls `claim_run`, and — because reducers are
 transactional — only one worker wins the claim.
 
+## M1 — turning on the real backend
+
+Scaffold is in place; here's the order to light it up.
+
+**1. Stand up the database**
+```bash
+spacetime start &                 # local instance
+spacetime publish scenario-engine # from this dir
+```
+
+**2. Point the worker at it** (`spacetime/worker/`)
+```bash
+cp .env.example .env              # then edit .env
+pip install -r requirements.txt
+python worker.py                  # USE_MIROFISH=0 → heuristic, no LLM spend
+```
+With `USE_MIROFISH=0` the worker runs the same heuristic as the UI stub — so you
+can watch a run go queued → simulating → done against a **real** DB before
+spending anything. Flip `USE_MIROFISH=1` (and set `LLM_API_KEY` + `MIROFISH_PATH`)
+once `run_mirofish()` is implemented.
+
+**3. Swap the UI onto the real engine** (`spacetime/client/SpacetimeEngine.ts`)
+```bash
+npm i @clockworklabs/spacetimedb-sdk
+spacetime generate --lang typescript --out-dir spacetime/client/module_bindings
+```
+Then move `SpacetimeEngine.ts` (+ `module_bindings`) under `app/engine/` and have
+the page construct it via the `makeEngine()` factory instead of `new StubEngine()`.
+The canvas code doesn't change — same `Engine` interface.
+
+**What still needs you:** an `LLM_API_KEY` (step 2) and, for the real sim, a
+cloned MiroFish at `MIROFISH_PATH`. Everything else above is copy-paste.
+
 ## Notes / follow-ups
 
 - `cost_estimate` lives on the row for display; the **hard cap** is enforced in
