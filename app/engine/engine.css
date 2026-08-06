@@ -115,7 +115,7 @@
 .se-root .state-pro{--c:var(--pro)} .se-root .state-amplify{--c:var(--amplify)}
 .se-root .state-neutral{--c:var(--neutral)} .se-root .state-stall{--c:var(--stall)} .se-root .state-idle{--c:var(--faint)}
 .se-root .state-idle .lbl{fill:var(--muted)}
-.se-root .edge{stroke:var(--border-2);stroke-width:2;fill:none;transition:stroke .35s,stroke-width .35s}
+.se-root .edge{stroke:var(--border-2);stroke-width:2;fill:none;cursor:pointer;transition:stroke .35s,stroke-width .35s}
 .se-root .edge.active{stroke:var(--amplify);stroke-width:3;stroke-dasharray:7 6;animation:se-flow 1s linear infinite}
 @keyframes se-flow{to{stroke-dashoffset:-26}}
 @media (prefers-reduced-motion:reduce){.se-root .edge.active{animation:none}}

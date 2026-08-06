@@ -91,9 +91,46 @@ export default function EngineCanvas() {
       verdict: null as Verdict | null,
       follow: true,
       maxStep: 0,
+      linking: null as string | null, // source node while drawing an edge
+      dragId: null as string | null,
+      dragMoved: false,
     };
     // per-step community state, filled as frames stream in
     const framesByStep = new Map<number, Map<string, NodeState>>();
+
+    // ---------- graph editing (build mode) ----------
+    let uid = 0;
+    function addCommunity() {
+      const id = `n${Date.now().toString(36)}${uid++}`;
+      communities.push({ id, label: "New group", sub: "tier 2",
+        x: 300 + Math.random() * 360, y: 180 + Math.random() * 220, r: 44, tier: 2, mood: "open" });
+      profiles[id] = { role: "", lean: "", platform: "", reach: 3, tone: "", said: "they react to it" };
+      if (!world.seedId) world.seedId = id;
+      S.sel = id; S.zoom = null;
+      renderGraph(); refreshStates(); renderInspector(); renderLeftRail();
+    }
+    function deleteCommunity(id: string) {
+      const i = communities.findIndex((c) => c.id === id);
+      if (i >= 0) communities.splice(i, 1);
+      for (let j = edges.length - 1; j >= 0; j--) if (edges[j].a === id || edges[j].b === id) edges.splice(j, 1);
+      delete profiles[id];
+      if (world.seedId === id) world.seedId = communities[0]?.id ?? "";
+      S.sel = communities[0]?.id ?? ""; S.zoom = null;
+      renderGraph(); refreshStates(); renderInspector(); renderLeftRail();
+    }
+    function toggleEdge(a: string, b: string) {
+      if (a === b) return;
+      const i = edges.findIndex((e) => e.a === a && e.b === b);
+      if (i >= 0) edges.splice(i, 1);
+      else edges.push({ a, b });
+      renderGraph(); refreshStates();
+    }
+    function svgPoint(evt: PointerEvent) {
+      const pt = graph.createSVGPoint();
+      pt.x = evt.clientX; pt.y = evt.clientY;
+      const ctm = graph.getScreenCTM();
+      return ctm ? pt.matrixTransform(ctm.inverse()) : { x: 0, y: 0 };
+    }
     let playTimer: ReturnType<typeof setInterval> | null = null;
     let activeRun: { cancel: () => void } | null = null;
 
@@ -189,8 +226,11 @@ export default function EngineCanvas() {
       if (S.mode === "build") {
         const comm = communities.map((c) => `<div class="chip" data-pick="${c.id}"><span class="swatch"></span>${c.label}</div>`).join("");
         r.innerHTML = `<div class="rail-pad"><p class="eyebrow">Library</p>
-          <p class="hint">Pick who to simulate, then hit Run.</p>
-          <div class="group-label">Communities · regions</div>${comm}</div>`;
+          <p class="hint">Add groups, connect them, set a seed, then Run. Drag to arrange; click an arrow to remove it.</p>
+          <button class="chip" data-el="addcomm" style="justify-content:center;border-style:dashed;margin-bottom:12px">+ Add community</button>
+          <div class="group-label">Communities · regions</div>${comm || '<div class="empty">None yet — add one.</div>'}</div>`;
+        const ab = q<HTMLButtonElement>("addcomm");
+        if (ab) ab.onclick = addCommunity;
       } else {
         const st = S.run?.status ?? "queued";
         const pct = Math.round((S.run?.progress ?? 0) * 100);
@@ -215,7 +255,11 @@ export default function EngineCanvas() {
       const box = q<HTMLDivElement>("inspector");
       const id = S.sel, isPerson = id.includes(":");
       const baseId = isPerson ? id.split(":")[0] : id;
-      const p = profiles[baseId] || profiles.press;
+      if (!isPerson && !cById(baseId)) {
+        box.innerHTML = `<div class="empty">No group selected. ${communities.length ? "Pick one on the left." : "Add a community to start."}</div>`;
+        return;
+      }
+      const p = profiles[baseId] || { role: "", lean: "", platform: "", reach: 3, tone: "", said: "they react to it" };
       const label = isPerson ? individuals[baseId][+id.split(":")[1]].label : cById(baseId)!.label;
       const st = isPerson ? individualState(baseId, individuals[baseId][+id.split(":")[1]].hold) : communityState(baseId);
       const cvar = `--c:var(--${st === "build" ? "accent" : st})`;
@@ -229,6 +273,7 @@ export default function EngineCanvas() {
         box.innerHTML = `<div style="${cvar}">
           <div class="insp-title"><span class="dotc"></span>${label}</div>
           <div class="insp-tag">Profile · editable · drives the sim</div>
+          <div class="field"><label>Name</label><input class="val" data-edit="label" value="${comm.label}"></div>
           <div class="field"><label>Role</label><input class="val" data-edit="role" value="${p.role}"></div>
           <div class="field"><label>Lean</label><input class="val" data-edit="lean" value="${p.lean}"></div>
           <div class="field"><label>Platform</label><input class="val" data-edit="platform" value="${p.platform}"></div>
@@ -236,11 +281,16 @@ export default function EngineCanvas() {
           <div class="field"><label>Tone</label><input class="val" data-edit="tone" value="${p.tone}"></div>
           <div class="field"><label>Behaviour (mood)</label><select class="val" data-edit="mood">${moodOpts}</select></div>
           <div class="field"><label>Influence tier</label><select class="val" data-edit="tier">${tierOpts}</select></div>
-          <button class="chip" data-el="seedbtn" style="justify-content:center;margin-top:4px">${isSeed ? "✸ seeds the scenario" : "Set as seed"}</button>${zoomBtn}</div>`;
+          <button class="chip" data-el="seedbtn" style="justify-content:center;margin-top:4px">${isSeed ? "✸ seeds the scenario" : "Set as seed"}</button>
+          <div style="display:flex;gap:7px;margin-top:7px">
+            <button class="chip" data-el="linkbtn" style="flex:1;justify-content:center;margin:0">${S.linking === baseId ? "click a target…" : "＋ Link to…"}</button>
+            <button class="chip" data-el="delbtn" style="justify-content:center;margin:0;color:var(--stall);border-color:var(--stall)">🗑</button>
+          </div>${zoomBtn}</div>`;
         const write = (sel: string, fn: (v: string) => void) => {
           const inp = box.querySelector(`[data-edit="${sel}"]`) as HTMLInputElement | HTMLSelectElement | null;
           if (inp) inp.onchange = () => fn(inp.value);
         };
+        write("label", (v) => { comm.label = v || "Unnamed"; renderGraph(); refreshStates(); renderLeftRail(); });
         write("role", (v) => { p.role = v; });
         write("lean", (v) => { p.lean = v; });
         write("platform", (v) => { p.platform = v; });
@@ -250,6 +300,14 @@ export default function EngineCanvas() {
         write("tier", (v) => { comm.tier = +v; comm.sub = `tier ${v}`; renderGraph(); refreshStates(); });
         const sb = box.querySelector('[data-el="seedbtn"]') as HTMLElement | null;
         if (sb) sb.onclick = () => { world.seedId = baseId; renderGraph(); refreshStates(); renderInspector(); };
+        const lb = box.querySelector('[data-el="linkbtn"]') as HTMLElement | null;
+        if (lb) lb.onclick = () => {
+          S.linking = S.linking === baseId ? null : baseId;
+          q<HTMLDivElement>("canvasTag").textContent = S.linking ? `Linking from ${comm.label} — click a target` : "Zoomed out · communities";
+          renderInspector();
+        };
+        const db = box.querySelector('[data-el="delbtn"]') as HTMLElement | null;
+        if (db) db.onclick = () => deleteCommunity(baseId);
       } else {
         const stanceLabel: Record<string, string> = { seed: "origin", pro: "PRO", amplify: "AMPLIFY", neutral: "no move", stall: "STALLED", idle: "not reached" };
         const comm = cById(baseId)!;
@@ -349,12 +407,61 @@ export default function EngineCanvas() {
     }
 
     // ---------- events ----------
+    const canvasTagText = () => S.zoom ? `Zoomed in · ${cById(S.zoom)?.label ?? ""} · individuals` : "Zoomed out · communities";
     graph.addEventListener("click", (e) => {
+      if (S.dragMoved) { S.dragMoved = false; return; } // was a drag, not a click
+      const target = e.target as Element;
+      // build mode: click an existing edge to delete it
+      if (S.mode === "build" && !S.zoom) {
+        const edgeEl = target.closest(".edge");
+        if (edgeEl && edgeEl.getAttribute("data-a")) {
+          toggleEdge(edgeEl.getAttribute("data-a")!, edgeEl.getAttribute("data-b")!);
+          return;
+        }
+      }
+      const g = target.closest(".node");
+      if (!g) {
+        if (S.linking) { S.linking = null; q<HTMLDivElement>("canvasTag").textContent = canvasTagText(); }
+        return;
+      }
+      const id = g.getAttribute("data-id")!;
+      // linking mode: connect source -> clicked community
+      if (S.linking && S.mode === "build" && !S.zoom && !id.includes(":")) {
+        toggleEdge(S.linking, id);
+        S.linking = null; S.sel = id;
+        q<HTMLDivElement>("canvasTag").textContent = canvasTagText();
+        refreshStates(); renderInspector();
+        return;
+      }
+      S.sel = id; refreshStates(); renderInspector();
+    });
+    // drag communities to reposition (build mode)
+    graph.addEventListener("pointerdown", (e) => {
+      if (S.mode !== "build" || S.zoom) return;
       const g = (e.target as Element).closest(".node");
       if (!g) return;
-      S.sel = g.getAttribute("data-id")!;
-      refreshStates(); renderInspector();
+      const id = g.getAttribute("data-id")!;
+      if (id.includes(":")) return;
+      S.dragId = id; S.dragMoved = false; S.sel = id;
+      try { graph.setPointerCapture(e.pointerId); } catch { /* ignore */ }
     });
+    graph.addEventListener("pointermove", (e) => {
+      if (!S.dragId) return;
+      const c = cById(S.dragId);
+      if (!c) return;
+      const p = svgPoint(e);
+      c.x = Math.max(48, Math.min(912, p.x));
+      c.y = Math.max(48, Math.min(512, p.y));
+      S.dragMoved = true;
+      renderGraph(); refreshStates();
+    });
+    const endDrag = (e: PointerEvent) => {
+      if (S.dragId) { try { graph.releasePointerCapture(e.pointerId); } catch { /* ignore */ } }
+      S.dragId = null;
+      if (S.dragMoved) renderInspector();
+    };
+    graph.addEventListener("pointerup", endDrag);
+    graph.addEventListener("pointercancel", endDrag);
     root.querySelectorAll('[data-el="modeswitch"] button').forEach((b) => {
       (b as HTMLButtonElement).onclick = () => setMode(b.getAttribute("data-mode") as "build" | "replay");
     });
