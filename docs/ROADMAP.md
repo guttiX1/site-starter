@@ -12,14 +12,18 @@ These gate the first real step — they need you, not me:
 3. **MiroFish cloned in** (`666ghj/MiroFish`) — and a nod to its **AGPL-3.0**
    terms (see the license note in the design doc).
 
-## M0 — Fake end-to-end (no MiroFish, no LLM) · ~½ day
-Prove the plumbing with a stub worker that emits scripted frames.
-- `spacetime build && publish`; generate TS bindings.
-- Next.js page: create a scenario, hit Run → `submit_run`.
-- Stub worker (Node or Python) claims the run and writes fake `frame`s + a
-  `verdict` on a timer.
-- Wire the mockup canvas to real subscriptions instead of scripted data.
-- ✅ You watch a real (fake-data) cascade animate from the DB. The whole spine works.
+## M0 — Fake end-to-end (no MiroFish, no LLM) · DONE ✅
+Prove the plumbing with a stub that streams frames like a real worker.
+- ✅ Real Next.js route at `/engine` (`app/engine/`), builds clean.
+- ✅ Canvas ported to React, driven by an `Engine` client (`app/engine/engine.ts`)
+  that **mirrors the SpacetimeDB reducer + subscription contract** — `runSimulation`
+  returns a run id immediately, then streams status + `frame` batches on a timer,
+  then a `verdict`. The view holds no scripted data; it renders whatever streams in.
+- ✅ Live status/progress, animated cascade, timeline scrubber, semantic zoom.
+- **Swap point for M1:** replace `StubEngine` with a `SpacetimeEngine` implementing
+  the same `Engine` interface (generated bindings). The component never changes.
+- Still TODO in M0 proper: stand up the actual SpacetimeDB instance + generate
+  bindings (needs the `spacetime` CLI, not available in the planning sandbox).
 
 ## M1 — Real sim, cheap, post-hoc frames · ~2–3 days
 Swap the stub for MiroFish in cheap mode.
