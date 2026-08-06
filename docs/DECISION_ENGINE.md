@@ -188,9 +188,13 @@ subscriber { scenario_id, user }                               -- who's watching
 `frame` is what powers the scrubber — one row per node per simulated step, so
 the canvas can replay the formation of each region. `cascade_json` on the
 verdict is the summarized who-moved-whom. Reducers: `add_community`,
-`add_persona`, `add_edge`, `submit_run`, `record_frame`, `record_verdict`,
+`add_persona`, `add_edge`, `submit_run`, `record_frames`, `record_verdict`,
 `bump_status`. Clients subscribe to `frame` + `verdict` for a run and the canvas
 animates live.
+
+> **This is written as real code:** see [`spacetime/src/lib.rs`](../spacetime/src/lib.rs)
+> for the tables + reducers (Rust, targets 2.6) and [`spacetime/README.md`](../spacetime/README.md)
+> for build/publish and the exact subscription queries.
 
 ---
 
@@ -313,8 +317,9 @@ Decide this early. It shapes the whole business, not just the code.
 - [x] Canvas UX: semantic zoom (communities ↔ individuals), build + replay modes
 - [x] Interactive mockup of the canvas (`docs/mockup.html`)
 - [x] Run pipeline: async job via SpacetimeDB, worker topology, frame-emit strategy
+- [x] SpacetimeDB tables + reducers written as real code (`spacetime/src/lib.rs`)
 - [ ] Pick the graph rendering lib (semantic zoom + replay animation)
 - [ ] Stub the MCP tool surface (incl. `define_persona`)
-- [ ] Stand up SpacetimeDB tables + reducers (incl. `frame` timeline for replay)
+- [ ] `spacetime build` + generate TS bindings, wire into the app
 - [ ] Wire MiroFish cheap-mode behind `run_simulation` (must emit per-step frames)
 - [ ] Thin Next.js UI: the canvas, one user, one scenario
