@@ -318,8 +318,8 @@ Decide this early. It shapes the whole business, not just the code.
 - [x] Interactive mockup of the canvas (`docs/mockup.html`)
 - [x] Run pipeline: async job via SpacetimeDB, worker topology, frame-emit strategy
 - [x] SpacetimeDB tables + reducers written as real code (`spacetime/src/lib.rs`)
-- [ ] Pick the graph rendering lib (semantic zoom + replay animation)
-- [ ] Stub the MCP tool surface (incl. `define_persona`)
-- [ ] `spacetime build` + generate TS bindings, wire into the app
+- [x] MCP tool contracts (`docs/MCP_TOOLS.md`)
+- [x] Build roadmap M0–M4 (`docs/ROADMAP.md`)
+- [ ] **Planning complete — build starts at M0** (needs: LLM key, worker host, MiroFish)
 - [ ] Wire MiroFish cheap-mode behind `run_simulation` (must emit per-step frames)
 - [ ] Thin Next.js UI: the canvas, one user, one scenario
