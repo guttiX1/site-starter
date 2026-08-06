@@ -33,10 +33,13 @@ Swap the stub for a real DB + MiroFish.
   verdicts over SpacetimeDB's HTTP API; enforces per-tier hard caps. Ships with a
   built-in heuristic (`USE_MIROFISH=0`) so the whole loop runs against a real DB
   with **zero LLM spend** before MiroFish is wired.
-- ⬜ Implement `run_mirofish()` — GraphRAG build/cache, OASIS agents at `quick`
-  tier, **frame strategy C** (finish → parse log → reconstruct frames).
-- ⬜ Needs from owner: `LLM_API_KEY`, a cloned MiroFish at `MIROFISH_PATH`.
-- ✅ target: one real prediction for one scenario, for cents.
+- 🟡 `run_mirofish()` implemented against the mirofish-cli headless command
+  (`mirofish run … --json`): builds a seed doc from the graph, runs the sim,
+  reconstructs frames from `timeline.json` + verdict from `verdict.json`
+  (**frame strategy C**). Defensive parsers to confirm against a first real run.
+- ⬜ Needs from owner: install mirofish-cli + pick an LLM route
+  (`LLM_PROVIDER=claude-cli` = no paid key, or `LLM_API_KEY` for OpenAI-format).
+- ✅ target: one real prediction for one scenario, for cents (or free via claude-cli).
 
 ## M2 — MCP server · ~1–2 days
 Expose the tool contracts so any agent can drive it.

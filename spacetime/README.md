@@ -75,8 +75,20 @@ python worker.py                  # USE_MIROFISH=0 → heuristic, no LLM spend
 ```
 With `USE_MIROFISH=0` the worker runs the same heuristic as the UI stub — so you
 can watch a run go queued → simulating → done against a **real** DB before
-spending anything. Flip `USE_MIROFISH=1` (and set `LLM_API_KEY` + `MIROFISH_PATH`)
-once `run_mirofish()` is implemented.
+spending anything.
+
+**Turning on the real sim** (`run_mirofish()` is fully implemented): install the
+[mirofish-cli](https://github.com/amadad/mirofish-cli) fork so `mirofish run` is
+on PATH, set `USE_MIROFISH=1`, and pick an LLM route in `.env`:
+- **Route A — no paid key:** `LLM_PROVIDER=claude-cli` uses your Claude Code CLI.
+- **Route B — paid:** `LLM_API_KEY` + `LLM_BASE_URL` + `LLM_MODEL_NAME` (OpenAI-format).
+
+The worker builds a seed doc from the graph, runs `mirofish run … --json`, then
+reconstructs per-round frames from `simulation/timeline.json` and the verdict from
+`report/verdict.json` (frame strategy C). The rounds cap per tier is the spend
+lever. **CONFIRM** the exact `timeline.json` / `verdict.json` field names against
+your first real run and tighten `_states_from_timeline` / `_verdict_from_mirofish`
+— they're written defensively and fall back to the heuristic if they can't parse.
 
 **3. Swap the UI onto the real engine** (`spacetime/client/SpacetimeEngine.ts`)
 ```bash
