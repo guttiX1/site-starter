@@ -1,0 +1,13 @@
+[package]
+name = "scenario-engine-module"
+version = "0.1.0"
+edition = "2021"
+description = "Scenario Engine — SpacetimeDB module: the shared state between the UI and the simulation worker."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Targets SpacetimeDB 2.6. If the macro API has drifted, `spacetime build`
+# will point at the exact signature to adjust.
+spacetimedb = "2.6"

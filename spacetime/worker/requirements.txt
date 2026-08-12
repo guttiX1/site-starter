@@ -1,0 +1,5 @@
+requests>=2.31
+# Added in M1 when you turn on the real sim:
+#   the MiroFish repo's own requirements (see MIROFISH_PATH), e.g. via
+#   pip install -r $MIROFISH_PATH/requirements.txt
+#   plus an OpenAI-format client if MiroFish doesn't vendor one.
