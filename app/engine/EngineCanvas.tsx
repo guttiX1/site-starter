@@ -306,6 +306,8 @@ export default function EngineCanvas() {
       const label = isPerson ? individuals[baseId][+id.split(":")[1]].label : cById(baseId)!.label;
       const st = isPerson ? individualState(baseId, individuals[baseId][+id.split(":")[1]].hold) : communityState(baseId);
       const cvar = `--c:var(--${st === "build" ? "accent" : st})`;
+      const initial = label.trim().charAt(0).toUpperCase() || "?";
+      const avatar = `<div class="insp-avatar">${initial}</div>`;
       const zoomBtn = !isPerson && individuals[baseId]
         ? `<button class="chip" data-el="zoombtn" style="justify-content:center;margin-top:12px">⊕ Zoom into ${individuals[baseId].length} individuals</button>` : "";
       if (S.mode === "build") {
@@ -313,16 +315,24 @@ export default function EngineCanvas() {
         const isSeed = world.seedId === baseId;
         const moodOpts = MOODS.map((m) => `<option value="${m}"${comm.mood === m ? " selected" : ""}>${m}</option>`).join("");
         const tierOpts = [1, 2, 3].map((t) => `<option value="${t}"${comm.tier === t ? " selected" : ""}>tier ${t}</option>`).join("");
+        const reachBtns = (v: number) => Array.from({ length: 5 }, (_, i) =>
+          `<i data-reach="${i + 1}" class="${i < v ? "on" : ""}"></i>`).join("");
         box.innerHTML = `<div style="${cvar}">
-          <div class="insp-title"><span class="dotc"></span>${label}</div>
-          <div class="insp-tag">Profile · editable · drives the sim</div>
-          <div class="field"><label>Name</label><input class="val" data-edit="label" value="${comm.label}"></div>
-          <div class="field"><label>Role</label><input class="val" data-edit="role" value="${p.role}"></div>
-          <div class="field"><label>Lean</label><input class="val" data-edit="lean" value="${p.lean}"></div>
-          <div class="field"><label>Platform</label><input class="val" data-edit="platform" value="${p.platform}"></div>
-          <div class="field"><label>Reach (0–5)</label><input class="val" data-edit="reach" type="number" min="0" max="5" value="${p.reach}"></div>
-          <div class="field"><label>Tone</label><input class="val" data-edit="tone" value="${p.tone}"></div>
-          <div class="field"><label>Behaviour (mood)</label><select class="val" data-edit="mood">${moodOpts}</select></div>
+          <div class="insp-head">${avatar}<div><div class="insp-title">${label}</div>
+          <div class="insp-tag">Profile · editable</div></div></div>
+          <div class="field-grid">
+            <div class="field"><label>Name</label><input class="val" data-edit="label" value="${comm.label}"></div>
+            <div class="field"><label>Role</label><input class="val" data-edit="role" value="${p.role}"></div>
+          </div>
+          <div class="field-grid">
+            <div class="field"><label>Lean</label><input class="val" data-edit="lean" value="${p.lean}"></div>
+            <div class="field"><label>Platform</label><input class="val" data-edit="platform" value="${p.platform}"></div>
+          </div>
+          <div class="field"><label>Reach</label><span class="reach reach-edit" data-el="reachbar">${reachBtns(p.reach)}</span></div>
+          <div class="field-grid">
+            <div class="field"><label>Tone</label><input class="val" data-edit="tone" value="${p.tone}"></div>
+            <div class="field"><label>Behaviour</label><select class="val" data-edit="mood">${moodOpts}</select></div>
+          </div>
           <div class="field"><label>Influence tier</label><select class="val" data-edit="tier">${tierOpts}</select></div>
           <button class="chip" data-el="seedbtn" style="justify-content:center;margin-top:4px">${isSeed ? "✸ seeds the scenario" : "Set as seed"}</button>
           <div style="display:flex;gap:7px;margin-top:7px">
@@ -338,9 +348,11 @@ export default function EngineCanvas() {
         write("lean", (v) => { p.lean = v; });
         write("platform", (v) => { p.platform = v; });
         write("tone", (v) => { p.tone = v; });
-        write("reach", (v) => { p.reach = Math.max(0, Math.min(5, +v || 0)); });
         write("mood", (v) => { comm.mood = v as Mood; });
         write("tier", (v) => { comm.tier = +v; comm.sub = `tier ${v}`; renderGraph(); refreshStates(); });
+        box.querySelectorAll<HTMLElement>('[data-el="reachbar"] i').forEach((bar) => {
+          bar.onclick = () => { p.reach = +bar.getAttribute("data-reach")!; saveWorld(); renderInspector(); };
+        });
         const sb = box.querySelector('[data-el="seedbtn"]') as HTMLElement | null;
         if (sb) sb.onclick = () => { world.seedId = baseId; saveWorld(); renderGraph(); refreshStates(); renderInspector(); };
         const lb = box.querySelector('[data-el="linkbtn"]') as HTMLElement | null;
@@ -355,8 +367,8 @@ export default function EngineCanvas() {
         const stanceLabel: Record<string, string> = { seed: "origin", pro: "PRO", amplify: "AMPLIFY", neutral: "no move", stall: "STALLED", idle: "not reached" };
         const comm = cById(baseId)!;
         box.innerHTML = `<div style="${cvar}">
-          <div class="insp-title"><span class="dotc"></span>${label}</div>
-          <div class="insp-tag">State @ step t${S.step}</div>
+          <div class="insp-head">${avatar}<div><div class="insp-title">${label}</div>
+          <div class="insp-tag">State @ step t${S.step}</div></div></div>
           <div class="field"><label>Stance</label><div><span class="pill">${stanceLabel[st] || st}</span></div></div>
           <div class="field"><label>Behaviour</label><div class="val">${comm.mood} · tier ${comm.tier}</div></div>
           <div class="field"><label>Reach</label><div class="val">${reachBars(p.reach)}</div></div>
