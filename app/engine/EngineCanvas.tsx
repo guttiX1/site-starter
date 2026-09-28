@@ -184,7 +184,8 @@ export default function EngineCanvas() {
         graph.appendChild(el("path", { d: `M${a.x} ${a.y} L${b.x} ${b.y}`, class: "edge", "data-a": e.a, "data-b": e.b }));
       });
       communities.forEach((c) => {
-        const g = el<SVGGElement>("g", { class: `node state-${communityState(c.id)}${c.id === S.sel ? " sel" : ""}`, "data-id": c.id });
+        const tierCls = S.mode === "build" ? ` tier-${c.tier}` : "";
+        const g = el<SVGGElement>("g", { class: `node state-${communityState(c.id)}${tierCls}${c.id === S.sel ? " sel" : ""}`, "data-id": c.id });
         g.appendChild(el("circle", { class: "ring", cx: c.x, cy: c.y, r: c.r + 8 }));
         g.appendChild(el("circle", { class: "bubble", cx: c.x, cy: c.y, r: c.r }));
         const n = (individuals[c.id] || []).length;
@@ -216,7 +217,7 @@ export default function EngineCanvas() {
         const tl = el("text", { class: "lbl", x: px, y: py + 42 }); tl.textContent = p.label; g.appendChild(tl);
         graph.appendChild(g);
       });
-      const hub = el<SVGGElement>("g", { class: `node state-${communityState(pid)}`, "data-id": pid });
+      const hub = el<SVGGElement>("g", { class: `node state-${communityState(pid)}${S.mode === "build" ? ` tier-${parent.tier}` : ""}`, "data-id": pid });
       hub.appendChild(el("circle", { class: "bubble", cx: cx, cy: cy, r: 34 }));
       const ht = el("text", { class: "sub", x: cx, y: cy + 3 }); ht.textContent = parent.label; hub.appendChild(ht);
       graph.appendChild(hub);
@@ -235,11 +236,17 @@ export default function EngineCanvas() {
       graph.querySelectorAll<SVGGElement>(".node").forEach((g) => {
         const id = g.getAttribute("data-id")!;
         let st: VisualState;
+        let tier = 0;
         if (id.includes(":")) {
           const [pr, idx] = id.split(":");
           st = individualState(pr, (individuals[pr][+idx] || {}).hold);
-        } else st = communityState(id);
-        g.setAttribute("class", `node state-${st}${id === S.sel ? " sel" : ""}`);
+          tier = cById(pr)?.tier ?? 0;
+        } else {
+          st = communityState(id);
+          tier = cById(id)?.tier ?? 0;
+        }
+        const tierCls = S.mode === "build" && tier ? ` tier-${tier}` : "";
+        g.setAttribute("class", `node state-${st}${tierCls}${id === S.sel ? " sel" : ""}`);
       });
       updateEdges();
     }
