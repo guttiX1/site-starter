@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: "Scenario Engine",
   description:
     "Run the scenario before you commit — simulate how the crowd, market, or voters react to a decision.",

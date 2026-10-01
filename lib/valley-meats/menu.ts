@@ -19,6 +19,10 @@ export const RESTAURANT = {
   name: "Valley Meats",
   phone: "(555) 010-0199",
   address: "123 Valley Road, Springfield",
+  // Structured parts for schema.org. PLACEHOLDERS — replace with the real ones before launch.
+  addressParts: { streetAddress: "123 Valley Road", addressLocality: "Springfield", addressRegion: "IL", postalCode: "62701", addressCountry: "US" },
+  cuisine: "Mexican",
+  priceRange: "$$",
   taxRate: 0.0825,
   prepMinutes: { pickup: 20, delivery: 45 },
   deliveryFeeCents: 399,
