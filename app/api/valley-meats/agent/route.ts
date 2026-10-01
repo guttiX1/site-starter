@@ -7,8 +7,10 @@ export const maxDuration = 60;
 
 /** Where completed orders go. Always logged; optionally POSTed to your POS/kitchen webhook. */
 async function submitOrder(order: PlacedOrder) {
-  console.log("[valley-meats] ORDER", JSON.stringify(order));
   const url = process.env.ORDER_WEBHOOK_URL;
+  // Without a webhook the log is the only record, so keep the full order. With one, don't spread
+  // customer names and phone numbers into server logs.
+  console.log("[valley-meats] ORDER", url ? JSON.stringify({ orderId: order.orderId, paymentStatus: order.paymentStatus }) : JSON.stringify(order));
   if (!url) return;
   const res = await fetch(url, {
     method: "POST",

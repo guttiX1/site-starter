@@ -1,0 +1,79 @@
+# Valley Meats — Go-Live Checklist
+
+Adapted from the public "go-live" pre-launch skill idea (showstoppers must pass; polish can follow),
+rewritten for a voice-ordering restaurant site. Status below was checked against this branch on 2026-10-01.
+
+**Legend:** PASS verified · FAIL blocks launch · PARTIAL some verified · TODO needs a human/real accounts
+
+## Verdict: NO-GO (4 showstoppers open)
+
+## Showstoppers
+
+| # | Check | Status | Evidence / what to do |
+|---|---|---|---|
+| 1 | Real business info (name, address, phone, hours, tax rate, menu, prices, allergen tags) | **FAIL** | `lib/valley-meats/menu.ts` is all placeholder (`123 Valley Road`, `(555) 010-0199`, tax 8.25%, invented menu). Also feeds the SEO schema, so wrong data would be published. Replace, then have the owner proof-read allergen tags. |
+| 2 | Core flow works end to end | **PARTIAL** | Verified with a scripted AI stand-in: add item → details → read-back → place; order cannot be placed without read-back; edits invalidate the read-back; double-placing is blocked; closed hours refuse orders. **Not yet verified** with a real model (Claude/Groq/Ollama), real microphone, or real ElevenLabs. Run the manual test script below. |
+| 3 | Orders actually reach the kitchen | **FAIL** | `ORDER_WEBHOOK_URL` is unset, so a placed order is only a server log line. Nobody is notified and serverless logs are ephemeral. Connect the webhook (or POS/email/printer) and store orders. |
+| 4 | Payments | **PASS (pay-in-person only)** | Card numbers are never taken by voice. In-person payment needs no payment code. Online payment via Stripe is **untested** and has no webhook, so paid status can't be confirmed: leave `STRIPE_SECRET_KEY` unset at launch, or add the `checkout.session.completed` webhook first. |
+| 5 | No secrets in code | **PASS** | Scanned working tree and full git history for key patterns: none. `.env*` is git-ignored; only `.env.example` is tracked. **Action for you:** revoke the Groq keys that were pasted into chat (console.groq.com/keys). |
+| 6 | HTTPS | **TODO** | Not deployed yet. Microphone only works over HTTPS off localhost. HSTS header added. |
+| 7 | Abuse / cost protection | **FAIL** | Public endpoints call paid AI/voice APIs. Rate limiting is in-memory per server instance (resets on deploy, not shared). Add spend caps on every provider account now; add edge rate limiting/bot protection (Vercel Firewall or Upstash) before launch. |
+| 8 | Privacy & legal | **FAIL** | Collects name + phone. Voice is processed by the browser's speech service (Chrome sends audio to Google), and text goes to Anthropic/Groq/OpenAI/ElevenLabs depending on config. No privacy policy or AI disclosure page exists. Needs a policy reviewed by someone qualified (not legal advice). |
+| 9 | Dependencies | **PASS w/ note** | Upgraded Next 15.5.2 → 15.5.27: removed the critical advisory. 2 advisories remain (1 high, 1 moderate): postcss bundled inside Next, build-time only; fix needs Next 16 (breaking). Re-run `npm audit` before launch. |
+
+## User experience
+
+| Check | Status | Notes |
+|---|---|---|
+| Works on a real phone (iPhone Safari + Android Chrome) | TODO | Layout is responsive; mic/voice behavior must be tested on devices. Firefox has no built-in speech recognition (falls back to typing). |
+| 404 page | **PASS** | `app/not-found.tsx` |
+| Error page (no stack traces) | **PASS** | `app/error.tsx` shows phone number fallback |
+| Mic blocked / unsupported fallback | **PASS** | Clear message + text box |
+| Loading speed | **PASS (build size)** | ~107 kB first-load JS on `/valley-meats`. Measure on pagespeed.web.dev after deploy. |
+| Voice replies sound acceptable | TODO | Browser voice is robotic; ElevenLabs is better (needs key) |
+| Accessibility | PARTIAL | Labels/aria and keyboard-focusable controls present; no full audit done |
+
+## Operations
+
+| Check | Status |
+|---|---|
+| Error tracking (Sentry or similar) | TODO — none installed |
+| Analytics | TODO — none installed |
+| Uptime alert | TODO |
+| Backups | N/A today (no database) — becomes required once orders are stored (#3) |
+| Security headers | **PASS** — nosniff, frame deny, referrer policy, permissions policy (mic self only), HSTS |
+| Customer details kept out of logs | **PASS** — with a webhook set, logs hold only order id + payment status |
+
+## Professional polish
+
+| Check | Status |
+|---|---|
+| Custom domain + `SITE_URL` set at build time | TODO |
+| Title / description / Open Graph tags | **PASS**; no share image yet (TODO) |
+| Favicon | **FAIL (polish)** — still the Next.js template icon |
+| SEO/AEO/agent files (robots, sitemap, llms.txt, JSON-LD, FAQ) | **PASS** — see `docs/SITE_KIT.md` (real details needed, #1) |
+| Terms / Privacy linked in footer | TODO (#8) |
+
+## Industry-specific (food)
+
+- Allergen statement is shown, but the per-item tags are invented — owner must verify (#1).
+- Card data never touches this site (voice never takes card numbers; Stripe page is hosted by Stripe).
+- Check local rules for online food ordering, delivery and sales tax with your accountant.
+
+## Manual test script (do this with real keys before launch)
+
+1. Order by voice: "two carne asada tacos and a horchata" → both appear with correct prices.
+2. Ask: hours, address, delivery fee, "is anything vegetarian?" → answers match `menu.ts`.
+3. Change your mind: "remove the horchata", "make it three tacos".
+4. Say something unrelated ("write me a poem") → politely declined.
+5. Checkout: pickup, name, phone → read-back is correct → say "no" → nothing is placed → fix → say "yes" → order placed once.
+6. Try delivery below the minimum → refused or switched to pickup.
+7. Try at a closed hour → refused.
+8. Deny the microphone → clear message; typing still works.
+9. Confirm the order arrives where the kitchen will see it (#3).
+10. Repeat on iPhone Safari, Android Chrome and desktop Chrome.
+
+## Fix order
+
+1. #1 real business data → 2. #3 order delivery to the kitchen → 3. #7 spend caps + rate limiting →
+4. #8 privacy page → 5. run the manual test script → 6. deploy, set `SITE_URL`, re-test on the live HTTPS URL.
