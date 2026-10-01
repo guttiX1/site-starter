@@ -1,3 +1,4 @@
+import { MENU } from "@/lib/valley-meats/menu";
 import { json, rateLimited } from "@/lib/valley-meats/http";
 
 export const runtime = "nodejs";
@@ -5,10 +6,15 @@ export const maxDuration = 30;
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
-/** Speech-to-text via ElevenLabs Scribe. */
+// Whisper does better on menu vocabulary (al pastor, horchata…) with a hint.
+const VOCAB_PROMPT = `Valley Meats Mexican restaurant order. Menu: ${MENU.map((m) => m.name)
+  .concat(["carne asada", "al pastor", "carnitas", "pollo", "veggie"])
+  .join(", ")}.`;
+
+/** Speech-to-text via OpenAI Whisper. */
 export async function POST(req: Request) {
-  const key = process.env.ELEVENLABS_API_KEY;
-  if (!key) return json({ error: "ELEVENLABS_API_KEY is not configured." }, 503);
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return json({ error: "OPENAI_API_KEY is not configured." }, 503);
   if (rateLimited(req, "stt", 30)) return json({ error: "Too many requests." }, 429);
 
   let audio: File;
@@ -24,13 +30,13 @@ export async function POST(req: Request) {
 
   const out = new FormData();
   out.append("file", audio, audio.name || "speech.webm");
-  out.append("model_id", process.env.ELEVENLABS_STT_MODEL || "scribe_v1");
-  out.append("language_code", "en");
-  out.append("tag_audio_events", "false");
+  out.append("model", process.env.OPENAI_STT_MODEL || "whisper-1");
+  out.append("language", "en");
+  out.append("prompt", VOCAB_PROMPT.slice(0, 600));
 
-  const res = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+  const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
-    headers: { "xi-api-key": key },
+    headers: { Authorization: `Bearer ${key}` },
     body: out,
     signal: AbortSignal.timeout(25_000),
   });

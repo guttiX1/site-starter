@@ -59,3 +59,4 @@
 .vm-info pre { font-family: inherit; white-space: pre-wrap; margin-bottom: 16px; }
 .vm-info small { color: var(--vm-dim); }
 .vm-notes li { display: block; border: 0; color: var(--vm-dim); font-size: .9rem; }
+.vm-pay { display: inline-block; padding: 10px 16px; border-radius: 8px; background: var(--vm-red); color: #fff; font-weight: 600; text-decoration: none; }

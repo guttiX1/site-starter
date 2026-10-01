@@ -23,7 +23,7 @@ async function submitOrder(order: PlacedOrder) {
 }
 
 export async function POST(req: Request) {
-  if (!process.env.OPENAI_API_KEY) return json({ error: "OPENAI_API_KEY is not configured." }, 503);
+  if (!process.env.ANTHROPIC_API_KEY) return json({ error: "ANTHROPIC_API_KEY is not configured." }, 503);
   if (rateLimited(req, "agent", 30)) return json({ error: "Too many requests. Please slow down." }, 429);
 
   let body: { messages?: unknown; state?: unknown };
@@ -45,7 +45,10 @@ export async function POST(req: Request) {
   if (!messages.length || messages[messages.length - 1].role !== "user") return json({ error: "No user message." }, 400);
 
   try {
-    const { reply, state } = await runAgent(messages, sanitizeState(body.state), submitOrder);
+    const { reply, state } = await runAgent(messages, sanitizeState(body.state), {
+      origin: process.env.APP_URL || new URL(req.url).origin,
+      submitOrder,
+    });
     return json({ reply, state });
   } catch (e) {
     console.error("[valley-meats] agent error", e);

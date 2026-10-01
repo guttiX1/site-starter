@@ -12,10 +12,12 @@ export type OrderState = {
   deliveryAddress?: string;
   customerName?: string;
   customerPhone?: string;
+  /** "in_person" = pay at pickup / to the driver; "online" = hosted Stripe checkout link. */
+  payment?: "in_person" | "online";
   /** Fingerprint of the order the agent last read back to the customer. */
   readBackHash?: string;
   /** Set once the order has been placed; the cart is then frozen. */
-  placed?: { orderId: string; totalCents: number; etaMinutes: number };
+  placed?: { orderId: string; totalCents: number; etaMinutes: number; paymentUrl?: string };
 };
 
 export const EMPTY_ORDER: OrderState = { cart: [] };
@@ -50,6 +52,7 @@ export function sanitizeState(raw: unknown): OrderState {
     deliveryAddress: str(r.deliveryAddress, 200),
     customerName: str(r.customerName, 60),
     customerPhone: str(r.customerPhone, 30),
+    payment: r.payment === "in_person" || r.payment === "online" ? r.payment : undefined,
     readBackHash: str(r.readBackHash, 64),
     // Trust `placed` only for freezing the cart; it carries no authority.
     placed:
@@ -58,6 +61,10 @@ export function sanitizeState(raw: unknown): OrderState {
             orderId: placed.orderId.slice(0, 20),
             totalCents: Number(placed.totalCents) || 0,
             etaMinutes: Number(placed.etaMinutes) || 0,
+            paymentUrl:
+              typeof placed.paymentUrl === "string" && placed.paymentUrl.startsWith("https://checkout.stripe.com/")
+                ? placed.paymentUrl.slice(0, 2000)
+                : undefined,
           }
         : undefined,
   };
@@ -88,6 +95,7 @@ export function orderHash(s: OrderState): string {
     s.deliveryAddress ?? "",
     s.customerName ?? "",
     s.customerPhone ?? "",
+    s.payment ?? "",
   ]);
   let h = 5381;
   for (let i = 0; i < key.length; i++) h = ((h * 33) ^ key.charCodeAt(i)) >>> 0;
@@ -101,6 +109,7 @@ export function missingForCheckout(s: OrderState): string[] {
   if (s.fulfillment === "delivery" && !s.deliveryAddress) m.push("delivery address");
   if (!s.customerName) m.push("customer name");
   if (!s.customerPhone || s.customerPhone.replace(/\D/g, "").length < 7) m.push("a valid phone number");
+  if (!s.payment) m.push("how they'll pay (in person, or online by payment link)");
   return m;
 }
 
@@ -112,6 +121,7 @@ export function summary(s: OrderState) {
     deliveryAddress: s.deliveryAddress ?? null,
     customerName: s.customerName ?? null,
     customerPhone: s.customerPhone ?? null,
+    payment: s.payment ?? null,
     subtotal: t.subtotalCents / 100,
     tax: t.taxCents / 100,
     deliveryFee: t.deliveryFeeCents / 100,
@@ -184,13 +194,19 @@ export function removeItem(state: OrderState, args: { item: string; quantity?: n
 
 export function setDetails(
   state: OrderState,
-  args: { fulfillment?: string; delivery_address?: string; customer_name?: string; customer_phone?: string },
+  args: { fulfillment?: string; delivery_address?: string; customer_name?: string; customer_phone?: string; payment?: string },
+  opts: { onlinePayment: boolean } = { onlinePayment: false },
 ): Result {
   return mutate(state, (s) => {
     if (args.fulfillment !== undefined) {
       if (args.fulfillment !== "pickup" && args.fulfillment !== "delivery") return { error: "fulfillment must be pickup or delivery" };
       s.fulfillment = args.fulfillment;
       if (args.fulfillment === "pickup") s.deliveryAddress = undefined;
+    }
+    if (args.payment !== undefined) {
+      if (args.payment !== "in_person" && args.payment !== "online") return { error: "payment must be in_person or online" };
+      if (args.payment === "online" && !opts.onlinePayment) return { error: "Online payment isn't available right now; offer to pay in person." };
+      s.payment = args.payment;
     }
     const clean = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined);
     s.deliveryAddress = clean(args.delivery_address, 200) ?? s.deliveryAddress;
@@ -223,7 +239,10 @@ export function reviewOrder(state: OrderState): Result {
       restaurant_open: status.open,
       ...(status.open ? {} : { warning: "The restaurant is closed right now; orders can't be placed." }),
       order: summary(state),
-      payment: "Pay at the counter on pickup, or by card/cash to the driver on delivery. Never take card numbers by voice.",
+      payment:
+        state.payment === "online"
+          ? "Customer pays online: after the order is placed a secure payment link appears on their screen. Never take card numbers by voice."
+          : "Customer pays in person (counter on pickup, or driver on delivery). Never take card numbers by voice.",
       instruction: "Read the full order, total, and name/phone back to the customer and ask for an explicit yes. Only call place_order after they say yes.",
     },
   };
@@ -232,14 +251,17 @@ export function reviewOrder(state: OrderState): Result {
 export type PlacedOrder = {
   orderId: string;
   placedAt: string;
+  paymentStatus: "pay_in_person" | "awaiting_online_payment";
+  paymentUrl?: string;
   order: ReturnType<typeof summary>;
 };
 
-/** Step 2 of checkout: only succeeds if the read-back matches the current order. */
-export function placeOrder(
-  state: OrderState,
-  submit: (o: PlacedOrder) => void,
-): Result {
+/**
+ * Step 2 of checkout: only succeeds if the read-back matches the current order.
+ * Pure: the caller performs the side effects (payment link, kitchen submit)
+ * using `order`, and must discard the returned state if they fail.
+ */
+export function finalizeOrder(state: OrderState): Result & { order?: PlacedOrder } {
   if (state.placed) return { state, result: { error: "Already placed.", order: summary(state) } };
   const missing = missingForCheckout(state);
   if (missing.length) return { state, result: { error: "Order incomplete", missing } };
@@ -247,11 +269,21 @@ export function placeOrder(
     return { state, result: { error: "The customer hasn't confirmed this exact order. Call review_order, read it back, and get a yes first." } };
   }
   if (!openStatus().open) return { state, result: { error: "The restaurant is closed right now." } };
+  if (state.fulfillment === "delivery" && totals(state).subtotalCents < RESTAURANT.deliveryMinimumCents) {
+    return { state, result: { error: "Below the delivery minimum." } };
+  }
   const t = totals(state);
   const orderId = `VM-${Date.now().toString(36).slice(-4).toUpperCase()}${Math.random().toString(36).slice(2, 4).toUpperCase()}`;
   const eta = RESTAURANT.prepMinutes[state.fulfillment!];
-  const placed = { orderId, totalCents: t.totalCents, etaMinutes: eta };
-  const next: OrderState = { ...state, placed };
-  submit({ orderId, placedAt: new Date().toISOString(), order: summary(next) });
-  return { state: next, result: { success: true, orderId, total: t.totalCents / 100, ready_in_minutes: eta, fulfillment: state.fulfillment } };
+  const next: OrderState = { ...state, placed: { orderId, totalCents: t.totalCents, etaMinutes: eta } };
+  return {
+    state: next,
+    result: { success: true, orderId, total: t.totalCents / 100, ready_in_minutes: eta, fulfillment: state.fulfillment, payment: state.payment },
+    order: {
+      orderId,
+      placedAt: new Date().toISOString(),
+      paymentStatus: state.payment === "online" ? "awaiting_online_payment" : "pay_in_person",
+      order: summary(next),
+    },
+  };
 }

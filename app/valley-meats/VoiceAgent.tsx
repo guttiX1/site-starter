@@ -327,8 +327,17 @@ export default function VoiceAgent() {
             <strong>Order {order.placed.orderId} placed ✓</strong>
             <p>
               Total {formatMoney(order.placed.totalCents)} · ready in about {order.placed.etaMinutes} min.
-              Pay at {order.fulfillment === "delivery" ? "the door" : "the counter"}.
+              {order.placed.paymentUrl
+                ? "Please complete payment with the secure link below."
+                : `Pay at ${order.fulfillment === "delivery" ? "the door" : "the counter"}.`}
             </p>
+            {order.placed.paymentUrl && (
+              <p>
+                <a className="vm-pay" href={order.placed.paymentUrl} target="_blank" rel="noopener noreferrer">
+                  Pay online securely →
+                </a>
+              </p>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -340,7 +349,7 @@ export default function VoiceAgent() {
             </button>
           </div>
         ) : order.cart.length === 0 ? (
-          <p className="vm-dim">Nothing yet — try “I’ll have a ribeye, medium rare.”</p>
+          <p className="vm-dim">Nothing yet — try “Two carne asada tacos and a horchata.”</p>
         ) : (
           <>
             <ul>
@@ -360,6 +369,7 @@ export default function VoiceAgent() {
             <p className="vm-dim">
               {order.fulfillment ? `${order.fulfillment === "delivery" ? "Delivery" : "Pickup"}` : "Pickup or delivery: not set"}
               {order.customerName ? ` · ${order.customerName}` : ""}
+              {order.payment ? ` · ${order.payment === "online" ? "paying online" : "paying in person"}` : ""}
             </p>
           </>
         )}

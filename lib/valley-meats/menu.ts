@@ -5,10 +5,10 @@
 export type MenuItem = {
   id: string;
   name: string;
-  category: "Steaks" | "Burgers & Sandwiches" | "BBQ" | "Sides" | "Drinks" | "Desserts";
+  category: "Tacos & Burritos" | "Plates" | "Sides" | "Drinks" | "Desserts";
   priceCents: number;
   description: string;
-  /** If present, the customer must pick one (e.g. doneness). */
+  /** If present, the customer must pick one (e.g. protein). */
   options?: string[];
   /** Words a customer might say instead of the official name. */
   aliases?: string[];
@@ -38,32 +38,31 @@ export const RESTAURANT = {
   notes: [
     "Closed Mondays.",
     "Parking is free behind the building.",
+    "Vegetarian options available: choose veggie (grilled peppers, onions, beans) as the protein.",
     "Allergens: kitchen handles gluten, dairy, nuts and shellfish — we cannot guarantee allergen-free preparation.",
   ],
 };
 
-const DONENESS = ["rare", "medium rare", "medium", "medium well", "well done"];
+const PROTEINS = ["carne asada", "al pastor", "carnitas", "pollo", "veggie"];
 
 export const MENU: MenuItem[] = [
-  { id: "ribeye", name: "Ribeye Steak (12 oz)", category: "Steaks", priceCents: 2899, description: "Well-marbled 12 oz ribeye, grilled over oak.", options: DONENESS, aliases: ["rib eye"], tags: ["gluten-free"] },
-  { id: "filet", name: "Filet Mignon (8 oz)", category: "Steaks", priceCents: 3499, description: "Tender 8 oz center-cut filet with garlic butter.", options: DONENESS, aliases: ["filet", "fillet"], tags: ["gluten-free"] },
-  { id: "nystrip", name: "New York Strip (14 oz)", category: "Steaks", priceCents: 3099, description: "Bold, beefy 14 oz strip steak.", options: DONENESS, aliases: ["strip steak", "ny strip"], tags: ["gluten-free"] },
-  { id: "valley-burger", name: "Valley Burger", category: "Burgers & Sandwiches", priceCents: 1399, description: "Half-pound beef patty, cheddar, pickles, house sauce, brioche bun.", options: ["medium", "well done"], aliases: ["house burger", "burger"] },
-  { id: "bacon-burger", name: "Smokehouse Bacon Burger", category: "Burgers & Sandwiches", priceCents: 1599, description: "Valley Burger with thick-cut bacon and smoky BBQ sauce.", options: ["medium", "well done"] },
-  { id: "brisket-sandwich", name: "Brisket Sandwich", category: "Burgers & Sandwiches", priceCents: 1499, description: "12-hour smoked brisket on a toasted bun with slaw.", aliases: ["brisket"] },
-  { id: "ribs-half", name: "Half Rack of Ribs", category: "BBQ", priceCents: 1899, description: "Slow-smoked pork ribs, dry rub, with two sides worth of sauce.", aliases: ["half rack", "ribs"], tags: ["gluten-free"] },
-  { id: "ribs-full", name: "Full Rack of Ribs", category: "BBQ", priceCents: 2999, description: "A full rack of slow-smoked pork ribs.", aliases: ["full rack"], tags: ["gluten-free"] },
-  { id: "pulled-pork", name: "Pulled Pork Plate", category: "BBQ", priceCents: 1599, description: "Smoked pulled pork with cornbread.", aliases: ["pulled pork"] },
-  { id: "fries", name: "Hand-Cut Fries", category: "Sides", priceCents: 499, description: "Skin-on fries with sea salt.", tags: ["vegetarian", "vegan"] },
-  { id: "mac", name: "Mac & Cheese", category: "Sides", priceCents: 599, description: "Three-cheese baked macaroni.", aliases: ["mac and cheese"], tags: ["vegetarian"] },
-  { id: "slaw", name: "Coleslaw", category: "Sides", priceCents: 399, description: "Crisp vinegar slaw.", tags: ["vegetarian", "gluten-free"] },
-  { id: "beans", name: "Smoked Baked Beans", category: "Sides", priceCents: 449, description: "Slow-cooked beans with burnt ends.", tags: ["gluten-free"] },
-  { id: "side-salad", name: "Garden Salad", category: "Sides", priceCents: 599, description: "Greens, tomato, cucumber, house vinaigrette.", tags: ["vegetarian", "vegan", "gluten-free"] },
-  { id: "lemonade", name: "Fresh Lemonade", category: "Drinks", priceCents: 349, description: "House-squeezed lemonade.", tags: ["vegan", "gluten-free"] },
-  { id: "iced-tea", name: "Iced Tea", category: "Drinks", priceCents: 299, description: "Fresh-brewed, sweet or unsweet.", options: ["sweet", "unsweet"], tags: ["vegan", "gluten-free"] },
-  { id: "soda", name: "Fountain Soda", category: "Drinks", priceCents: 299, description: "Cola, lemon-lime or root beer.", options: ["cola", "lemon-lime", "root beer"], aliases: ["coke", "pop"], tags: ["vegan"] },
-  { id: "pie", name: "Pecan Pie", category: "Desserts", priceCents: 799, description: "Warm pecan pie slice with whipped cream.", aliases: ["pecan pie"], tags: ["vegetarian", "contains-nuts"] },
-  { id: "brownie", name: "Skillet Brownie", category: "Desserts", priceCents: 899, description: "Warm chocolate brownie with vanilla ice cream.", tags: ["vegetarian"] },
+  { id: "taco", name: "Street Taco", category: "Tacos & Burritos", priceCents: 375, description: "Corn tortilla, onion, cilantro, salsa verde. Priced per taco.", options: PROTEINS, aliases: ["tacos", "street tacos"], tags: ["gluten-free"] },
+  { id: "burrito", name: "Burrito", category: "Tacos & Burritos", priceCents: 1199, description: "Large flour tortilla with rice, beans, cheese, pico de gallo and your protein.", options: PROTEINS, aliases: ["burritos"] },
+  { id: "quesadilla", name: "Quesadilla", category: "Tacos & Burritos", priceCents: 1099, description: "Grilled flour tortilla with melted Oaxaca cheese and your protein.", options: PROTEINS, aliases: ["quesadillas"], tags: ["vegetarian-with-veggie"] },
+  { id: "torta", name: "Torta", category: "Tacos & Burritos", priceCents: 1249, description: "Toasted telera roll with beans, avocado, lettuce, tomato and your protein.", options: PROTEINS, aliases: ["tortas"] },
+  { id: "enchiladas", name: "Enchilada Plate", category: "Plates", priceCents: 1449, description: "Three corn tortillas rolled with your protein, smothered in red or green sauce, with rice and beans.", options: PROTEINS, aliases: ["enchiladas"] },
+  { id: "carne-asada-plate", name: "Carne Asada Plate", category: "Plates", priceCents: 1899, description: "Grilled marinated skirt steak with rice, beans, grilled onions and tortillas.", aliases: ["carne asada plate", "steak plate"], tags: ["gluten-free-without-tortillas"] },
+  { id: "nachos", name: "Loaded Nachos", category: "Plates", priceCents: 1299, description: "Chips with queso, beans, pico de gallo, sour cream, jalapeños and your protein.", options: PROTEINS },
+  { id: "chips-salsa", name: "Chips & Salsa", category: "Sides", priceCents: 399, description: "Fresh fried tortilla chips with house salsa roja.", aliases: ["chips and salsa"], tags: ["vegan", "gluten-free"] },
+  { id: "guac", name: "Guacamole", category: "Sides", priceCents: 599, description: "Fresh smashed avocado with lime, onion and cilantro.", aliases: ["guacamole"], tags: ["vegan", "gluten-free"] },
+  { id: "rice-beans", name: "Rice & Beans", category: "Sides", priceCents: 449, description: "Mexican rice and refried or black beans.", aliases: ["rice and beans"], options: ["refried", "black"], tags: ["vegetarian"] },
+  { id: "elote", name: "Elote", category: "Sides", priceCents: 549, description: "Grilled street corn with mayo, cotija, chile and lime.", aliases: ["street corn"], tags: ["vegetarian", "gluten-free"] },
+  { id: "horchata", name: "Horchata", category: "Drinks", priceCents: 349, description: "Cinnamon rice milk, served cold.", tags: ["vegetarian", "contains-dairy"] },
+  { id: "agua-fresca", name: "Agua Fresca", category: "Drinks", priceCents: 349, description: "Fresh fruit water.", options: ["jamaica", "tamarindo", "pineapple"], aliases: ["agua"], tags: ["vegan", "gluten-free"] },
+  { id: "jarritos", name: "Jarritos", category: "Drinks", priceCents: 299, description: "Mexican fruit soda.", options: ["lime", "mandarin", "tamarind", "pineapple"], tags: ["vegan"] },
+  { id: "mexican-coke", name: "Mexican Coke", category: "Drinks", priceCents: 349, description: "Glass-bottle cane sugar cola.", aliases: ["coke", "coca cola"], tags: ["vegan"] },
+  { id: "churros", name: "Churros", category: "Desserts", priceCents: 649, description: "Cinnamon sugar churros with chocolate dipping sauce.", tags: ["vegetarian"] },
+  { id: "flan", name: "Flan", category: "Desserts", priceCents: 599, description: "Classic caramel custard.", tags: ["vegetarian", "gluten-free", "contains-dairy"] },
 ];
 
 export const MENU_BY_ID = new Map(MENU.map((m) => [m.id, m]));
