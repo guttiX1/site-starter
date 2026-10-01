@@ -1,7 +1,6 @@
-import { menuMarkdown } from "@/lib/valley-meats/seo";
+import { markdown } from "@/lib/site-kit";
+import { site } from "@/site.config";
 
 export function GET() {
-  return new Response(menuMarkdown(), {
-    headers: { "Content-Type": "text/markdown; charset=utf-8", "Cache-Control": "public, max-age=900" },
-  });
+  return new Response(markdown(site), { headers: { "Content-Type": "text/markdown; charset=utf-8", "Cache-Control": "public, max-age=900" } });
 }

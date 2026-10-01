@@ -1,26 +1,18 @@
 import type { Metadata } from "next";
 import { MENU, RESTAURANT, formatMoney, hoursText } from "@/lib/valley-meats/menu";
-import { faqs, jsonLdString, restaurantJsonLd } from "@/lib/valley-meats/seo";
+import { jsonLd, jsonLdString, pageMetadata } from "@/lib/site-kit";
+import { site } from "@/site.config";
 import VoiceAgent from "./VoiceAgent";
 import "./valley-meats.css";
 
-const title = `${RESTAURANT.name} — ${RESTAURANT.cuisine} Restaurant | Order Online or by Voice`;
-const description = `${RESTAURANT.name}: ${RESTAURANT.cuisine} food at ${RESTAURANT.address}. See the menu, hours and delivery info, then order for pickup or delivery by voice or online.`;
-
-export const metadata: Metadata = {
-  title,
-  description,
-  alternates: { canonical: "/valley-meats", types: { "text/markdown": "/valley-meats/menu.md" } },
-  openGraph: { title, description, url: "/valley-meats", siteName: RESTAURANT.name, type: "website", locale: "en_US" },
-  twitter: { card: "summary", title, description },
-};
+export const metadata: Metadata = pageMetadata(site);
 
 const CATEGORIES = [...new Set(MENU.map((m) => m.category))];
 
 export default function ValleyMeatsPage() {
   return (
     <main className="vm">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(restaurantJsonLd()) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd(site)) }} />
       <header className="vm-hero">
         <h1>{RESTAURANT.name}</h1>
         <p>
@@ -58,7 +50,7 @@ export default function ValleyMeatsPage() {
           <p>{RESTAURANT.address}</p>
           <h2>FAQ</h2>
           <dl className="vm-faq">
-            {faqs().map((f) => (
+            {site.faqs.map((f) => (
               <div key={f.q}>
                 <dt>{f.q}</dt>
                 <dd>{f.a}</dd>

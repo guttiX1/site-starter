@@ -1,6 +1,7 @@
 import { MENU, RESTAURANT, hoursText, openStatus } from "@/lib/valley-meats/menu";
 import { rateLimited } from "@/lib/valley-meats/http";
-import { faqs, siteUrl } from "@/lib/valley-meats/seo";
+import { siteUrl } from "@/lib/site-kit";
+import { site } from "@/site.config";
 
 export const runtime = "nodejs";
 
@@ -29,7 +30,7 @@ export function GET(req: Request) {
       hours: hoursText().split("\n"),
       open: openStatus(),
       menu: MENU.map(({ id, name, category, priceCents, description, options, tags }) => ({ id, name, category, priceCents, description, options: options ?? [], tags: tags ?? [] })),
-      faq: faqs(),
+      faq: site.faqs,
     },
     { headers: { ...CORS, "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } },
   );

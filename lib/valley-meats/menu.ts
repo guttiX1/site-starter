@@ -2,6 +2,8 @@
 // location and pricing rules. Replace the placeholder values below with the
 // real restaurant data — nothing else in the agent hard-codes any of it.
 
+import { hoursText as kitHoursText, openStatus as kitOpenStatus } from "../site-kit";
+
 export type MenuItem = {
   id: string;
   name: string;
@@ -75,41 +77,7 @@ export function formatMoney(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-function to12h(hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const suffix = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return m === 0 ? `${h12} ${suffix}` : `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
-}
-
-export function hoursText(): string {
-  return DAY_NAMES.map((d, i) => {
-    const h = RESTAURANT.hours[i];
-    return `${d}: ${h ? `${to12h(h.open)} – ${to12h(h.close)}` : "Closed"}`;
-  }).join("\n");
-}
+export const hoursText = () => kitHoursText(RESTAURANT.hours);
 
 /** Is the restaurant open at `now` (restaurant-local time)? */
-export function openStatus(now = new Date()): { open: boolean; text: string } {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: RESTAURANT.timezone,
-    weekday: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(now);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-  const dayIdx = DAY_NAMES.indexOf(get("weekday"));
-  const minutes = Number(get("hour")) * 60 + Number(get("minute"));
-  const today = RESTAURANT.hours[dayIdx];
-  if (today) {
-    const [oh, om] = today.open.split(":").map(Number);
-    const [ch, cm] = today.close.split(":").map(Number);
-    if (minutes >= oh * 60 + om && minutes < ch * 60 + cm) {
-      return { open: true, text: `Open now, until ${to12h(today.close)}.` };
-    }
-  }
-  return { open: false, text: "Closed right now." };
-}
+export const openStatus = (now = new Date()) => kitOpenStatus(RESTAURANT.hours, RESTAURANT.timezone, now);
