@@ -63,3 +63,11 @@
 .vm-toggle select { padding: 4px 6px; border: 1px solid var(--vm-line); border-radius: 6px; background: var(--vm-bg); color: inherit; font-size: .85rem; }
 .vm-faq dt { font-weight: 600; margin-top: 10px; }
 .vm-faq dd { margin: 2px 0 0; color: var(--vm-dim); font-size: .9rem; }
+.vm-prose { max-width: 760px; }
+.vm-prose h1 { margin-bottom: 4px; }
+.vm-prose h2 { margin-top: 24px; font-size: 1.1rem; }
+.vm-prose p, .vm-prose li { line-height: 1.55; margin: 6px 0; }
+.vm-prose ul { padding-left: 20px; }
+.vm-prose a { text-decoration: underline; }
+.vm-note { font-size: .8rem; color: var(--vm-dim); margin-top: 8px; }
+.vm-note a { text-decoration: underline; }

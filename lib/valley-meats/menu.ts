@@ -23,6 +23,15 @@ export const RESTAURANT = {
   address: "123 Valley Road, Springfield",
   // Structured parts for schema.org. PLACEHOLDERS — replace with the real ones before launch.
   addressParts: { streetAddress: "123 Valley Road", addressLocality: "Springfield", addressRegion: "IL", postalCode: "62701", addressCountry: "US" },
+  // Legal/privacy details. PLACEHOLDERS — set `reviewed: true` only after the owner (and ideally a lawyer)
+  // has checked the privacy page. While false the page shows a draft banner and is hidden from search engines.
+  legal: {
+    entityName: "Valley Meats [CONFIRM legal business name]",
+    contactEmail: "privacy@example.com",
+    updated: "October 1, 2026",
+    orderRetention: "[CONFIRM how long order records are kept, e.g. 12 months]",
+    reviewed: false,
+  },
   cuisine: "Mexican",
   priceRange: "$$",
   taxRate: 0.0825,

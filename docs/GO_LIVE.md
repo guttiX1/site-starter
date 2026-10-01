@@ -5,7 +5,7 @@ rewritten for a voice-ordering restaurant site. Status below was checked against
 
 **Legend:** PASS verified · FAIL blocks launch · PARTIAL some verified · TODO needs a human/real accounts
 
-## Verdict: NO-GO (4 showstoppers open)
+## Verdict: NO-GO (3 showstoppers open, 1 partly done)
 
 ## Showstoppers
 
@@ -18,7 +18,7 @@ rewritten for a voice-ordering restaurant site. Status below was checked against
 | 5 | No secrets in code | **PASS** | Scanned working tree and full git history for key patterns: none. `.env*` is git-ignored; only `.env.example` is tracked. **Action for you:** revoke the Groq keys that were pasted into chat (console.groq.com/keys). |
 | 6 | HTTPS | **TODO** | Not deployed yet. Microphone only works over HTTPS off localhost. HSTS header added. |
 | 7 | Abuse / cost protection | **FAIL** | Public endpoints call paid AI/voice APIs. Rate limiting is in-memory per server instance (resets on deploy, not shared). Add spend caps on every provider account now; add edge rate limiting/bot protection (Vercel Firewall or Upstash) before launch. |
-| 8 | Privacy & legal | **FAIL** | Collects name + phone. Voice is processed by the browser's speech service (Chrome sends audio to Google), and text goes to Anthropic/Groq/OpenAI/ElevenLabs depending on config. No privacy policy or AI disclosure page exists. Needs a policy reviewed by someone qualified (not legal advice). |
+| 8 | Privacy & legal | **PARTIAL (draft written)** | `/privacy` is drafted from the real data flows and adapts to which services are enabled (AI provider, premium voice, Stripe). It shows a DRAFT banner and is `noindex` until `RESTAURANT.legal.reviewed` is set to `true` in `menu.ts`. Owner must fill every `[CONFIRM]` (legal name, contact email, retention period, sharing, rights) and have it reviewed by a qualified professional (not legal advice). An AI-disclosure + privacy link now sits under the voice controls and in the page footer. |
 | 9 | Dependencies | **PASS w/ note** | Upgraded Next 15.5.2 → 15.5.27: removed the critical advisory. 2 advisories remain (1 high, 1 moderate): postcss bundled inside Next, build-time only; fix needs Next 16 (breaking). Re-run `npm audit` before launch. |
 
 ## User experience
@@ -52,7 +52,7 @@ rewritten for a voice-ordering restaurant site. Status below was checked against
 | Title / description / Open Graph tags | **PASS**; no share image yet (TODO) |
 | Favicon | **FAIL (polish)** — still the Next.js template icon |
 | SEO/AEO/agent files (robots, sitemap, llms.txt, JSON-LD, FAQ) | **PASS** — see `docs/SITE_KIT.md` (real details needed, #1) |
-| Terms / Privacy linked in footer | TODO (#8) |
+| Privacy linked in footer | **PASS** (draft); Terms of service: TODO |
 
 ## Industry-specific (food)
 

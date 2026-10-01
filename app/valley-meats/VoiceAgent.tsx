@@ -436,6 +436,11 @@ export default function VoiceAgent() {
           </label>
         </div>
 
+        <p className="vm-note">
+          You’re talking to an AI assistant. Your messages and order details are processed by third-party services to make this work. Never say
+          card numbers. <a href="/privacy">Privacy policy</a>
+        </p>
+
         <form className="vm-text" onSubmit={onSubmitText}>
           <input
             value={text}

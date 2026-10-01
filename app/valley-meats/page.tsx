@@ -64,6 +64,9 @@ export default function ValleyMeatsPage() {
           </ul>
         </section>
       </div>
+      <footer className="vm-note">
+        <a href="/privacy">Privacy policy</a>
+      </footer>
     </main>
   );
 }
