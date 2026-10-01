@@ -56,16 +56,23 @@ export default function VoiceAgent() {
   const [error, setError] = useState<string | null>(null);
   const [voiceOn, setVoiceOn] = useState(true);
   const [text, setText] = useState("");
+  // "premium" = ElevenLabs voice (if its key is set) + Whisper listening (only if an OpenAI key is set).
   const [engine, setEngine] = useState<Engine>("browser");
-  const engineRef = useRef<Engine>("browser");
-  engineRef.current = engine;
+  const [caps, setCaps] = useState({ tts: false, stt: false });
+  const premiumTtsRef = useRef(false);
+  const premiumSttRef = useRef(false);
+  premiumTtsRef.current = engine === "premium" && caps.tts;
+  premiumSttRef.current = engine === "premium" && caps.stt;
   const recognitionRef = useRef<Recognition | null>(null);
 
   // Default to premium voice only when the server has both keys; otherwise free browser voice.
   useEffect(() => {
     fetch("/api/valley-meats/config")
       .then((r) => r.json())
-      .then((c) => c.premiumVoice && setEngine("premium"))
+      .then((c) => {
+        setCaps({ tts: !!c.premiumTts, stt: !!c.premiumStt });
+        if (c.premiumTts) setEngine("premium");
+      })
       .catch(() => {});
   }, []);
 
@@ -119,7 +126,7 @@ export default function VoiceAgent() {
     async (reply: string, turn: number) => {
       if (!voiceOnRef.current) return setPhase("idle");
       setPhase("speaking");
-      if (engineRef.current === "browser") {
+      if (!premiumTtsRef.current) {
         if (!window.speechSynthesis) {
           setPhase("idle");
           return;
@@ -264,7 +271,7 @@ export default function VoiceAgent() {
 
   const startListening = useCallback(async () => {
     setError(null);
-    if (engineRef.current === "browser") {
+    if (!premiumSttRef.current) {
       const Ctor = getRecognitionCtor();
       if (!Ctor) {
         setError("This browser has no built-in speech recognition (use Chrome, Edge or Safari), or type instead.");
@@ -338,7 +345,7 @@ export default function VoiceAgent() {
 
   const onMic = () => {
     if (phase === "listening") {
-      if (engineRef.current === "browser") recognitionRef.current?.stop();
+      recognitionRef.current?.stop();
       const rec = recorderRef.current;
       if (rec && rec.state !== "inactive") rec.stop();
     } else if (phase === "idle") {
@@ -411,7 +418,9 @@ export default function VoiceAgent() {
               aria-label="Voice engine"
             >
               <option value="browser">Browser (free)</option>
-              <option value="premium">Premium (ElevenLabs + Whisper)</option>
+              <option value="premium" disabled={!caps.tts}>
+                Premium voice (ElevenLabs){caps.tts ? "" : " – no key"}
+              </option>
             </select>
           </label>
           <label className="vm-toggle">
