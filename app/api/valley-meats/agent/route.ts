@@ -1,4 +1,4 @@
-import { runAgent, type ChatMessage } from "@/lib/valley-meats/agent";
+import { provider, runAgent, type ChatMessage } from "@/lib/valley-meats/agent";
 import { json, rateLimited } from "@/lib/valley-meats/http";
 import { sanitizeState, type PlacedOrder } from "@/lib/valley-meats/order";
 
@@ -23,7 +23,7 @@ async function submitOrder(order: PlacedOrder) {
 }
 
 export async function POST(req: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) return json({ error: "ANTHROPIC_API_KEY is not configured." }, 503);
+  if (provider() === "anthropic" && !process.env.ANTHROPIC_API_KEY) return json({ error: "ANTHROPIC_API_KEY is not configured." }, 503);
   if (rateLimited(req, "agent", 30)) return json({ error: "Too many requests. Please slow down." }, 429);
 
   let body: { messages?: unknown; state?: unknown };
@@ -52,6 +52,8 @@ export async function POST(req: Request) {
     return json({ reply, state });
   } catch (e) {
     console.error("[valley-meats] agent error", e);
-    return json({ error: "The assistant is unavailable right now." }, 502);
+    // Local-model setup errors are actionable ("run ollama pull ...") and contain no secrets.
+    const hint = provider() === "ollama" && e instanceof Error ? e.message : "The assistant is unavailable right now.";
+    return json({ error: hint }, 502);
   }
 }

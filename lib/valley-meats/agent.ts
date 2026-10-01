@@ -125,6 +125,58 @@ const TOOLS: Anthropic.Beta.BetaTool[] = [
   },
 ];
 
+/** Runs one tool call against the order state. Shared by the Claude and Ollama loops. */
+async function executeTool(
+  name: string,
+  args: Record<string, unknown>,
+  state: OrderState,
+  ctx: AgentContext,
+): Promise<{ state: OrderState; result: unknown }> {
+  switch (name) {
+    case "search_menu": {
+      const q = String(args.query ?? "");
+      const byCat = q.trim() ? MENU.filter((m) => m.category.toLowerCase().includes(q.toLowerCase().trim())) : [];
+      const items = byCat.length ? byCat : findItems(q);
+      return {
+        state,
+        result: items.length
+          ? items.map((m) => ({ name: m.name, price: m.priceCents / 100, options: m.options, tags: m.tags }))
+          : { error: "No matches." },
+      };
+    }
+    case "add_item":
+      return addItem(state, args as never);
+    case "remove_item":
+      return removeItem(state, args as never);
+    case "get_order":
+      return { state, result: summary(state) };
+    case "set_order_details":
+      return setDetails(state, args as never, { onlinePayment: onlinePaymentEnabled() });
+    case "review_order":
+      return reviewOrder(state);
+    case "place_order": {
+      const r = finalizeOrder(state);
+      if (!r.order) return r;
+      let next = r.state;
+      try {
+        if (next.payment === "online") {
+          const url = await createCheckoutUrl(r.order.orderId, next, ctx.origin);
+          r.order.paymentUrl = url;
+          next = { ...next, placed: { ...next.placed!, paymentUrl: url } };
+        }
+        await ctx.submitOrder(r.order);
+        return { state: next, result: r.result };
+      } catch (e) {
+        console.error("[valley-meats] place order failed", e);
+        // Not sent, so don't tell the customer it was.
+        return { state, result: { error: `Couldn't complete the order. Apologize and ask them to call ${RESTAURANT.phone}.` } };
+      }
+    }
+    default:
+      return { state, result: { error: `Unknown tool ${name}` } };
+  }
+}
+
 export type AgentContext = {
   /** Public origin used for payment redirect URLs. */
   origin: string;
@@ -132,7 +184,100 @@ export type AgentContext = {
   submitOrder: (o: PlacedOrder) => Promise<void>;
 };
 
+export type Provider = "anthropic" | "ollama";
+export const provider = (): Provider =>
+  process.env.LLM_PROVIDER === "ollama" || process.env.LLM_PROVIDER === "anthropic"
+    ? process.env.LLM_PROVIDER
+    : process.env.ANTHROPIC_API_KEY
+      ? "anthropic"
+      : "ollama";
+
 export async function runAgent(
+  history: ChatMessage[],
+  initial: OrderState,
+  ctx: AgentContext,
+): Promise<{ reply: string; state: OrderState }> {
+  return provider() === "ollama" ? runOllama(history, initial, ctx) : runClaude(history, initial, ctx);
+}
+
+// ---- Free local model via Ollama ------------------------------------------
+
+const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://localhost:11434";
+// qwen3:8b is a good tool-calling balance for ~16 GB machines; qwen3:14b is better if you can run it.
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:8b";
+
+type OllamaMsg = {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  tool_calls?: { function: { name: string; arguments: Record<string, unknown> | string } }[];
+  tool_name?: string;
+};
+
+async function runOllama(
+  history: ChatMessage[],
+  initial: OrderState,
+  ctx: AgentContext,
+): Promise<{ reply: string; state: OrderState }> {
+  let state = initial;
+  const messages: OllamaMsg[] = [{ role: "system", content: systemPrompt() }, ...history];
+  const tools = TOOLS.map((t) => ({
+    type: "function",
+    function: { name: t.name, description: t.description, parameters: t.input_schema },
+  }));
+  const sorry = `Sorry, I got tangled up there. Could you repeat that, or call us at ${RESTAURANT.phone}?`;
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    let res: Response;
+    try {
+      res = await fetch(`${OLLAMA_HOST}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: OLLAMA_MODEL,
+          messages,
+          tools,
+          stream: false,
+          think: false, // skip qwen3's long reasoning; keeps voice replies fast
+          options: { temperature: 0.2, num_ctx: 8192 },
+        }),
+        signal: AbortSignal.timeout(90_000),
+      });
+    } catch {
+      throw new Error(`Local AI isn't reachable at ${OLLAMA_HOST}. Start Ollama and run: ollama pull ${OLLAMA_MODEL}`);
+    }
+    if (!res.ok) {
+      const body = (await res.text()).slice(0, 200);
+      throw new Error(res.status === 404 ? `Model not found. Run: ollama pull ${OLLAMA_MODEL}` : `Ollama ${res.status}: ${body}`);
+    }
+    const msg = ((await res.json()) as { message: OllamaMsg }).message;
+    const calls = msg.tool_calls ?? [];
+    if (!calls.length) {
+      // Some models leak <think> blocks; strip them before speaking.
+      const reply = (msg.content ?? "").replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+      return { reply: reply || "Sorry, could you say that again?", state };
+    }
+    messages.push({ role: "assistant", content: msg.content ?? "", tool_calls: calls });
+    for (const call of calls) {
+      let args: Record<string, unknown> = {};
+      const raw = call.function.arguments;
+      if (typeof raw === "string") {
+        try {
+          args = JSON.parse(raw);
+        } catch {
+          /* tool will report what's missing */
+        }
+      } else if (raw && typeof raw === "object") args = raw;
+      const out = await executeTool(call.function.name, args, state, ctx);
+      state = out.state;
+      messages.push({ role: "tool", tool_name: call.function.name, content: JSON.stringify(out.result) });
+    }
+  }
+  return { reply: sorry, state };
+}
+
+// ---- Claude ---------------------------------------------------------------
+
+async function runClaude(
   history: ChatMessage[],
   initial: OrderState,
   ctx: AgentContext,
@@ -175,68 +320,9 @@ export async function runAgent(
 
     for (const call of toolUses) {
       const args = (call.input && typeof call.input === "object" ? call.input : {}) as Record<string, unknown>;
-      let result: unknown;
-      switch (call.name) {
-        case "search_menu": {
-          const q = String(args.query ?? "");
-          const byCat = q.trim() ? MENU.filter((m) => m.category.toLowerCase().includes(q.toLowerCase().trim())) : [];
-          const items = byCat.length ? byCat : findItems(q);
-          result = items.length
-            ? items.map((m) => ({ name: m.name, price: m.priceCents / 100, options: m.options, tags: m.tags }))
-            : { error: "No matches." };
-          break;
-        }
-        case "add_item": {
-          const r = addItem(state, args as never);
-          state = r.state;
-          result = r.result;
-          break;
-        }
-        case "remove_item": {
-          const r = removeItem(state, args as never);
-          state = r.state;
-          result = r.result;
-          break;
-        }
-        case "get_order":
-          result = summary(state);
-          break;
-        case "set_order_details": {
-          const r = setDetails(state, args as never, { onlinePayment: onlinePaymentEnabled() });
-          state = r.state;
-          result = r.result;
-          break;
-        }
-        case "review_order": {
-          const r = reviewOrder(state);
-          state = r.state;
-          result = r.result;
-          break;
-        }
-        case "place_order": {
-          const before = state;
-          const r = finalizeOrder(state);
-          state = r.state;
-          result = r.result;
-          if (r.order) {
-            try {
-              if (state.payment === "online") {
-                const url = await createCheckoutUrl(r.order.orderId, state, ctx.origin);
-                r.order.paymentUrl = url;
-                state = { ...state, placed: { ...state.placed!, paymentUrl: url } };
-              }
-              await ctx.submitOrder(r.order);
-            } catch (e) {
-              console.error("[valley-meats] place order failed", e);
-              state = before; // not sent, so don't tell the customer it was
-              result = { error: `Couldn't complete the order. Apologize and ask them to call ${RESTAURANT.phone}.` };
-            }
-          }
-          break;
-        }
-        default:
-          result = { error: `Unknown tool ${call.name}` };
-      }
+      const out = await executeTool(call.name, args, state, ctx);
+      state = out.state;
+      const result = out.result;
       results.push({ type: "tool_result", tool_use_id: call.id, content: JSON.stringify(result) });
     }
     messages.push({ role: "user", content: results });
