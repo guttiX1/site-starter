@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("[valley-meats] agent error", e);
     // Local-model setup errors are actionable ("run ollama pull ...") and contain no secrets.
-    const hint = provider() === "ollama" && e instanceof Error ? e.message : "The assistant is unavailable right now.";
+    const hint = provider() !== "anthropic" && e instanceof Error ? e.message : "The assistant is unavailable right now.";
     return json({ error: hint }, 502);
   }
 }

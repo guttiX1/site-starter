@@ -184,20 +184,25 @@ export type AgentContext = {
   submitOrder: (o: PlacedOrder) => Promise<void>;
 };
 
-export type Provider = "anthropic" | "ollama";
-export const provider = (): Provider =>
-  process.env.LLM_PROVIDER === "ollama" || process.env.LLM_PROVIDER === "anthropic"
-    ? process.env.LLM_PROVIDER
-    : process.env.ANTHROPIC_API_KEY
-      ? "anthropic"
-      : "ollama";
+export type Provider = "anthropic" | "ollama" | "openai-compat";
+// Order: explicit LLM_PROVIDER, else Claude if keyed, else a free Groq key, else local Ollama.
+export const provider = (): Provider => {
+  const p = process.env.LLM_PROVIDER;
+  if (p === "ollama" || p === "anthropic" || p === "openai-compat") return p;
+  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  if (process.env.GROQ_API_KEY || process.env.LLM_API_KEY) return "openai-compat";
+  return "ollama";
+};
 
 export async function runAgent(
   history: ChatMessage[],
   initial: OrderState,
   ctx: AgentContext,
 ): Promise<{ reply: string; state: OrderState }> {
-  return provider() === "ollama" ? runOllama(history, initial, ctx) : runClaude(history, initial, ctx);
+  const p = provider();
+  if (p === "ollama") return runOllama(history, initial, ctx);
+  if (p === "openai-compat") return runOpenAICompat(history, initial, ctx);
+  return runClaude(history, initial, ctx);
 }
 
 // ---- Free local model via Ollama ------------------------------------------
@@ -270,6 +275,68 @@ async function runOllama(
       const out = await executeTool(call.function.name, args, state, ctx);
       state = out.state;
       messages.push({ role: "tool", tool_name: call.function.name, content: JSON.stringify(out.result) });
+    }
+  }
+  return { reply: sorry, state };
+}
+
+// ---- Free hosted model (Groq by default; any OpenAI-compatible API) ------------
+
+// Defaults point at Groq's free tier (no credit card). Override LLM_BASE_URL / LLM_MODEL / LLM_API_KEY
+// to use OpenRouter, Google Gemini's OpenAI-compatible endpoint, etc.
+const COMPAT_BASE = process.env.LLM_BASE_URL || "https://api.groq.com/openai/v1";
+const COMPAT_MODEL = process.env.LLM_MODEL || "llama-3.3-70b-versatile";
+
+type CompatMsg =
+  | { role: "system" | "user"; content: string }
+  | { role: "assistant"; content: string | null; tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[] }
+  | { role: "tool"; tool_call_id: string; content: string };
+
+async function runOpenAICompat(
+  history: ChatMessage[],
+  initial: OrderState,
+  ctx: AgentContext,
+): Promise<{ reply: string; state: OrderState }> {
+  let state = initial;
+  const key = process.env.LLM_API_KEY || process.env.GROQ_API_KEY;
+  const messages: CompatMsg[] = [{ role: "system", content: systemPrompt() }, ...history];
+  const tools = TOOLS.map((t) => ({
+    type: "function",
+    function: { name: t.name, description: t.description, parameters: t.input_schema },
+  }));
+  const sorry = `Sorry, I got tangled up there. Could you repeat that, or call us at ${RESTAURANT.phone}?`;
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const res = await fetch(`${COMPAT_BASE}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model: COMPAT_MODEL, messages, tools, temperature: 0.2, max_tokens: 400 }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) {
+      const body = (await res.text()).slice(0, 200);
+      throw new Error(
+        res.status === 401
+          ? "The AI key was rejected. Check GROQ_API_KEY (or LLM_API_KEY) in .env.local."
+          : res.status === 429
+            ? "The free AI tier's rate limit was hit. Wait a few seconds and try again."
+            : `AI provider error ${res.status}: ${body}`,
+      );
+    }
+    const msg = ((await res.json()) as { choices: { message: Extract<CompatMsg, { role: "assistant" }> }[] }).choices[0].message;
+    const calls = msg.tool_calls ?? [];
+    if (!calls.length) return { reply: (msg.content ?? "").trim() || "Sorry, could you say that again?", state };
+    messages.push({ role: "assistant", content: msg.content ?? null, tool_calls: calls });
+    for (const call of calls) {
+      let args: Record<string, unknown> = {};
+      try {
+        args = JSON.parse(call.function.arguments || "{}");
+      } catch {
+        /* tool will report what's missing */
+      }
+      const out = await executeTool(call.function.name, args, state, ctx);
+      state = out.state;
+      messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(out.result) });
     }
   }
   return { reply: sorry, state };
