@@ -5,6 +5,34 @@ import { MENU_BY_ID, formatMoney } from "@/lib/valley-meats/menu";
 import { EMPTY_ORDER, describeLine, totals, type OrderState } from "@/lib/valley-meats/order";
 
 type Msg = { role: "user" | "assistant"; content: string };
+type Engine = "browser" | "premium";
+
+// Minimal typing for the (prefixed, non-standard) Web Speech recognition API.
+type Recognition = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  maxAlternatives: number;
+  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: ((e: { error: string }) => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+};
+type RecognitionCtor = new () => Recognition;
+const getRecognitionCtor = (): RecognitionCtor | undefined => {
+  const w = window as unknown as { SpeechRecognition?: RecognitionCtor; webkitSpeechRecognition?: RecognitionCtor };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition;
+};
+
+function pickVoice(): SpeechSynthesisVoice | undefined {
+  const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith("en"));
+  const score = (v: SpeechSynthesisVoice) =>
+    (/natural|neural|google|samantha|aria|jenny/i.test(v.name) ? 2 : 0) + (v.lang === "en-US" ? 1 : 0);
+  return voices.sort((a, b) => score(b) - score(a))[0];
+}
+
 type Phase = "idle" | "listening" | "transcribing" | "thinking" | "speaking";
 
 const GREETING =
@@ -28,6 +56,18 @@ export default function VoiceAgent() {
   const [error, setError] = useState<string | null>(null);
   const [voiceOn, setVoiceOn] = useState(true);
   const [text, setText] = useState("");
+  const [engine, setEngine] = useState<Engine>("browser");
+  const engineRef = useRef<Engine>("browser");
+  engineRef.current = engine;
+  const recognitionRef = useRef<Recognition | null>(null);
+
+  // Default to premium voice only when the server has both keys; otherwise free browser voice.
+  useEffect(() => {
+    fetch("/api/valley-meats/config")
+      .then((r) => r.json())
+      .then((c) => c.premiumVoice && setEngine("premium"))
+      .catch(() => {});
+  }, []);
 
   const messagesRef = useRef(messages);
   const orderRef = useRef(order);
@@ -50,6 +90,7 @@ export default function VoiceAgent() {
   }, [order]);
 
   const stopAudio = useCallback(() => {
+    if (typeof window !== "undefined") window.speechSynthesis?.cancel();
     const a = audioRef.current;
     if (a) {
       a.pause();
@@ -78,6 +119,22 @@ export default function VoiceAgent() {
     async (reply: string, turn: number) => {
       if (!voiceOnRef.current) return setPhase("idle");
       setPhase("speaking");
+      if (engineRef.current === "browser") {
+        if (!window.speechSynthesis) {
+          setPhase("idle");
+          return;
+        }
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(reply);
+        u.lang = "en-US";
+        const v = pickVoice();
+        if (v) u.voice = v;
+        const done = () => turn === turnRef.current && setPhase("idle");
+        u.onend = done;
+        u.onerror = done;
+        window.speechSynthesis.speak(u);
+        return;
+      }
       try {
         const res = await fetch("/api/valley-meats/speak", {
           method: "POST",
@@ -163,8 +220,58 @@ export default function VoiceAgent() {
     [send],
   );
 
+  const startBrowserListening = useCallback(
+    (Ctor: RecognitionCtor) => {
+      const turn = ++turnRef.current;
+      abortRef.current = new AbortController();
+      stopAudio();
+      const rec = new Ctor();
+      recognitionRef.current = rec;
+      rec.lang = "en-US";
+      rec.interimResults = false;
+      rec.continuous = false;
+      rec.maxAlternatives = 1;
+      let got = false;
+      rec.onresult = (e) => {
+        const t = e.results[0]?.[0]?.transcript?.trim();
+        if (!t || turn !== turnRef.current) return;
+        got = true;
+        void send(t, turn);
+      };
+      rec.onerror = (e) => {
+        if (turn !== turnRef.current) return;
+        setPhase("idle");
+        setError(
+          e.error === "not-allowed" || e.error === "service-not-allowed"
+            ? "Microphone access was blocked. Allow it in your browser, or type instead."
+            : e.error === "no-speech" || e.error === "aborted"
+              ? "I didn't hear anything — tap and try again."
+              : `Speech recognition error (${e.error}). You can type instead.`,
+        );
+      };
+      rec.onend = () => {
+        if (!got && turn === turnRef.current) setPhase((p) => (p === "listening" ? "idle" : p));
+      };
+      try {
+        rec.start();
+        setPhase("listening");
+      } catch {
+        setPhase("idle");
+      }
+    },
+    [send, stopAudio],
+  );
+
   const startListening = useCallback(async () => {
     setError(null);
+    if (engineRef.current === "browser") {
+      const Ctor = getRecognitionCtor();
+      if (!Ctor) {
+        setError("This browser has no built-in speech recognition (use Chrome, Edge or Safari), or type instead.");
+        return;
+      }
+      return startBrowserListening(Ctor);
+    }
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       setError("Voice input isn't supported in this browser — type your message instead.");
       return;
@@ -227,10 +334,11 @@ export default function VoiceAgent() {
     stopAudio();
     rec.start();
     setPhase("listening");
-  }, [releaseMic, stopAudio, transcribe]);
+  }, [releaseMic, startBrowserListening, stopAudio, transcribe]);
 
   const onMic = () => {
     if (phase === "listening") {
+      if (engineRef.current === "browser") recognitionRef.current?.stop();
       const rec = recorderRef.current;
       if (rec && rec.state !== "inactive") rec.stop();
     } else if (phase === "idle") {
@@ -244,6 +352,7 @@ export default function VoiceAgent() {
       // transcribing / thinking: cancel
       turnRef.current++;
       abortRef.current?.abort();
+      recognitionRef.current?.abort();
       setPhase("idle");
     }
   };
@@ -293,6 +402,18 @@ export default function VoiceAgent() {
             </svg>
           </button>
           <div className="vm-status">{PHASE_LABEL[phase]}</div>
+          <label className="vm-toggle">
+            Voice
+            <select
+              value={engine}
+              disabled={phase !== "idle"}
+              onChange={(e) => setEngine(e.target.value as Engine)}
+              aria-label="Voice engine"
+            >
+              <option value="browser">Browser (free)</option>
+              <option value="premium">Premium (ElevenLabs + Whisper)</option>
+            </select>
+          </label>
           <label className="vm-toggle">
             <input
               type="checkbox"

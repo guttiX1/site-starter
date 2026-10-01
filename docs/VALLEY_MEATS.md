@@ -4,7 +4,8 @@ Try it: `cp .env.example .env.local`, fill in keys, `npm run dev`, open `/valley
 
 | Piece | Tech | File |
 |---|---|---|
-| Speech-to-text | OpenAI Whisper (menu vocabulary hint) | `app/api/valley-meats/transcribe/route.ts` |
+| Free voice (default, no key) | Browser Web Speech API for listening + speaking (Chrome/Edge/Safari; Chrome sends audio to Google for recognition) | `app/valley-meats/VoiceAgent.tsx` |
+| Speech-to-text (premium) | OpenAI Whisper (menu vocabulary hint) | `app/api/valley-meats/transcribe/route.ts` |
 | Conversation + tool calling | Claude (`@anthropic-ai/sdk`, default `claude-opus-5-5`, `ANTHROPIC_MODEL` to override) | `lib/valley-meats/agent.ts` |
 | Spoken replies | ElevenLabs TTS | `app/api/valley-meats/speak/route.ts` |
 | Menu / hours / location | single data file — **placeholder values, replace them** | `lib/valley-meats/menu.ts` |

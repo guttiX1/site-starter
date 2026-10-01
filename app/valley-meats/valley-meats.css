@@ -60,3 +60,4 @@
 .vm-info small { color: var(--vm-dim); }
 .vm-notes li { display: block; border: 0; color: var(--vm-dim); font-size: .9rem; }
 .vm-pay { display: inline-block; padding: 10px 16px; border-radius: 8px; background: var(--vm-red); color: #fff; font-weight: 600; text-decoration: none; }
+.vm-toggle select { padding: 4px 6px; border: 1px solid var(--vm-line); border-radius: 6px; background: var(--vm-bg); color: inherit; font-size: .85rem; }
