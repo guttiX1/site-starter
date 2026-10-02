@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { RESTAURANT } from "@/lib/valley-meats/menu";
 import { provider } from "@/lib/valley-meats/agent";
+import { customerSmsEnabled } from "@/lib/valley-meats/orders-out";
 import "../valley-meats/valley-meats.css";
 
 // Reads which services are switched on at request time so the policy matches how the site really runs.
@@ -34,6 +35,8 @@ export default function PrivacyPage() {
   const premiumVoice = !!process.env.ELEVENLABS_API_KEY;
   const whisper = !!process.env.OPENAI_API_KEY;
   const stripe = !!process.env.STRIPE_SECRET_KEY;
+  const sms = !!process.env.TWILIO_ACCOUNT_SID;
+  const customerSms = customerSmsEnabled();
 
   return (
     <main className="vm vm-prose">
@@ -102,6 +105,12 @@ export default function PrivacyPage() {
         <li>
           <strong>Our order system and kitchen:</strong> to prepare and deliver your order.
         </li>
+        {sms && (
+          <li>
+            <strong>Twilio (text messages):</strong> we use Twilio to send text messages{customerSms ? ", including a confirmation of your order to the phone number you give us" : " to our staff about new orders"}.
+            Twilio receives the phone number and the message text.
+          </li>
+        )}
         {stripe && (
           <li>
             <strong>Stripe:</strong> if you choose to pay online, payment is completed on Stripe’s secure page. We never see your card number.
@@ -126,6 +135,17 @@ export default function PrivacyPage() {
         </li>
         <li>Short-lived technical logs may be kept by our hosting provider for security and troubleshooting.</li>
       </ul>
+
+      {customerSms && (
+        <>
+          <h2>Text messages</h2>
+          <p>
+            When you place an order we send one text message about that order (confirmation and, for online payments, a payment link) to the
+            phone number you provided. We do not use it for marketing. Message and data rates from your carrier may apply. Reply STOP to opt
+            out of texts from us. [CONFIRM: final consent and opt-out wording; review with a qualified professional before launch.]
+          </p>
+        </>
+      )}
 
       <h2>Your choices and rights</h2>
       <p>

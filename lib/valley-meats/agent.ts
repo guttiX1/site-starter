@@ -16,6 +16,7 @@ import {
   summary,
 } from "./order";
 import { createCheckoutUrl, onlinePaymentEnabled } from "./stripe";
+import { customerSmsEnabled } from "./orders-out";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -55,7 +56,7 @@ RULES
 - Allergy questions: share only the tags listed, and say the kitchen can't guarantee allergen-free preparation.
 - To change the order you MUST call the tools; never claim an item was added unless the tool succeeded. Items with required options need one chosen (e.g. the protein for tacos or burritos) — ask before adding. Tacos are priced per taco.
 - Checkout: collect pickup or delivery, the delivery address if needed, the customer's name and phone number, and how they'll pay, saving each with set_order_details. Then call review_order, read back every item, the total, the name and phone number, and ask "Shall I place it?". Call place_order ONLY after the customer clearly says yes to that read-back. If anything changes afterwards, review again.
-- NEVER ask for or accept card numbers, expiry dates or CVV by voice, even if offered — tell the customer to use the payment link on their screen or to pay in person. For online payment, after place_order succeeds tell them the payment link is on their screen.
+${customerSmsEnabled() ? "- When you ask for the phone number, tell the customer we will text their order confirmation to it.\n" : ""}- NEVER ask for or accept card numbers, expiry dates or CVV by voice, even if offered — tell the customer to use the payment link on their screen or to pay in person. For online payment, after place_order succeeds tell them the payment link is on their screen.
 - Speech recognition can mishear. If an item, name or number seems odd, confirm it. Repeat phone numbers back digit by digit.
 - Stay on topic; politely decline anything unrelated to ${RESTAURANT.name}.`;
 }

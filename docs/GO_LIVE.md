@@ -13,7 +13,7 @@ rewritten for a voice-ordering restaurant site. Status below was checked against
 |---|---|---|---|
 | 1 | Real business info (name, address, phone, hours, tax rate, menu, prices, allergen tags) | **FAIL** | `lib/valley-meats/menu.ts` is all placeholder (`123 Valley Road`, `(555) 010-0199`, tax 8.25%, invented menu). Also feeds the SEO schema, so wrong data would be published. Replace, then have the owner proof-read allergen tags. |
 | 2 | Core flow works end to end | **PARTIAL** | Verified with a scripted AI stand-in: add item → details → read-back → place; order cannot be placed without read-back; edits invalidate the read-back; double-placing is blocked; closed hours refuse orders. **Not yet verified** with a real model (Claude/Groq/Ollama), real microphone, or real ElevenLabs. Run the manual test script below. |
-| 3 | Orders actually reach the kitchen | **PARTIAL (built, needs your channel)** | Orders now go to any of: Slack/Discord webhook (readable ticket), email via Resend, and/or a JSON webhook to your POS. Counts as delivered if at least one succeeds. **In production with no channel configured, orders are refused** (the agent tells the customer to call) instead of silently going to a log. Tested with mock endpoints: refuses with no channel or only failing channels; places with one working channel. **Not tested against real Slack/Discord/Resend.** You must set at least one channel (see `.env.example`) and run a real test order. Orders are still not stored in a database. |
+| 3 | Orders actually reach the kitchen | **PARTIAL (built, needs your channel)** | Orders now go to any of: SMS to the kitchen/owner phone (Twilio), Slack/Discord webhook (readable ticket), email via Resend (optional), and/or a JSON webhook to your POS. A customer text receipt (`CUSTOMER_SMS=1`) is separate: best-effort, never blocks or fails an order, never counts as a delivery channel, capped by `DAILY_SMS_LIMIT`. Counts as delivered if at least one succeeds. **In production with no channel configured, orders are refused** (the agent tells the customer to call) instead of silently going to a log. Tested with mock endpoints: refuses with no channel or only failing channels; places with one working channel. **Not tested against real Slack/Discord/Resend.** You must set at least one channel (see `.env.example`) and run a real test order. Orders are still not stored in a database. |
 | 4 | Payments | **PASS (pay-in-person only)** | Card numbers are never taken by voice. In-person payment needs no payment code. Online payment via Stripe is **untested** and has no webhook, so paid status can't be confirmed: leave `STRIPE_SECRET_KEY` unset at launch, or add the `checkout.session.completed` webhook first. |
 | 5 | No secrets in code | **PASS** | Scanned working tree and full git history for key patterns: none. `.env*` is git-ignored; only `.env.example` is tracked. **Action for you:** revoke the Groq keys that were pasted into chat (console.groq.com/keys). |
 | 6 | HTTPS | **TODO** | Not deployed yet. Microphone only works over HTTPS off localhost. HSTS header added. |
@@ -59,6 +59,13 @@ rewritten for a voice-ordering restaurant site. Status below was checked against
 - Allergen statement is shown, but the per-item tags are invented — owner must verify (#1).
 - Card data never touches this site (voice never takes card numbers; Stripe page is hosted by Stripe).
 - Check local rules for online food ordering, delivery and sales tax with your accountant.
+
+## Text messages (Twilio) — extra launch items
+
+- **Sender registration:** in the US, texting from a regular Twilio number generally requires carrier registration (A2P 10DLC), and toll-free numbers require verification. This can take days, so start early and check Twilio's current rules. Unregistered messages may be blocked.
+- **Consent wording:** the site tells customers a confirmation text will be sent, and the privacy page has a [CONFIRM] SMS section. Have a qualified professional review it (TCPA/state rules).
+- **Cost + abuse:** every customer text costs money and goes to a number a stranger typed. Mitigations in code: only after a placed order, max 3 orders/hour per client, `DAILY_SMS_LIMIT`. Also set a Twilio usage cap.
+- **Real test:** send yourself a real order and confirm both texts arrive. Verified so far only against a mock Twilio.
 
 ## Manual test script (do this with real keys before launch)
 

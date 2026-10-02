@@ -59,6 +59,7 @@ export default function VoiceAgent() {
   // "premium" = ElevenLabs voice (if its key is set) + Whisper listening (only if an OpenAI key is set).
   const [engine, setEngine] = useState<Engine>("browser");
   const [caps, setCaps] = useState({ tts: false, stt: false });
+  const [customerSms, setCustomerSms] = useState(false);
   const premiumTtsRef = useRef(false);
   const premiumSttRef = useRef(false);
   premiumTtsRef.current = engine === "premium" && caps.tts;
@@ -71,6 +72,7 @@ export default function VoiceAgent() {
       .then((r) => r.json())
       .then((c) => {
         setCaps({ tts: !!c.premiumTts, stt: !!c.premiumStt });
+        setCustomerSms(!!c.customerSms);
         if (c.premiumTts) setEngine("premium");
       })
       .catch(() => {});
@@ -438,7 +440,8 @@ export default function VoiceAgent() {
 
         <p className="vm-note">
           You’re talking to an AI assistant. Your messages and order details are processed by third-party services to make this work. Never say
-          card numbers. <a href="/privacy">Privacy policy</a>
+          card numbers.{customerSms ? " If you order, we’ll text a confirmation to the phone number you give us." : ""}{" "}
+          <a href="/privacy">Privacy policy</a>
         </p>
 
         <form className="vm-text" onSubmit={onSubmitText}>
