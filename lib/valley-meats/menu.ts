@@ -18,15 +18,15 @@ export type MenuItem = {
 };
 
 export const RESTAURANT = {
-  name: "Valley Meats",
+  name: "Valley Meats La Carniceria",
   phone: "(970) 704-9614",
-  address: "100 Main Street, Carbondale, CO 81623",
+  address: "774 State Route 133, Carbondale, CO 81623",
   // Structured parts for schema.org. PLACEHOLDERS — replace with the real ones before launch.
-  addressParts: { streetAddress: "100 Main Street", addressLocality: "Carbondale", addressRegion: "CO", postalCode: "81623", addressCountry: "US" },
+  addressParts: { streetAddress: "774 State Route 133", addressLocality: "Carbondale", addressRegion: "CO", postalCode: "81623", addressCountry: "US" },
   // Legal/privacy details. PLACEHOLDERS — set `reviewed: true` only after the owner (and ideally a lawyer)
   // has checked the privacy page. While false the page shows a draft banner and is hidden from search engines.
   legal: {
-    entityName: "Valley Meats",
+    entityName: "Valley Meats La Carniceria",
     contactEmail: "contact@valleymeats.com",
     updated: "October 2, 2026",
     orderRetention: "12 months",
@@ -34,7 +34,7 @@ export const RESTAURANT = {
   },
   cuisine: "Mexican",
   priceRange: "$$",
-  taxRate: 0.07,
+  taxRate: 0.0765,
   prepMinutes: { pickup: 20, delivery: 45 },
   deliveryFeeCents: 399,
   deliveryMinimumCents: 2000,
@@ -42,13 +42,13 @@ export const RESTAURANT = {
   // 0 = Sunday … 6 = Saturday. Times are 24h "HH:MM" in `timezone`.
   timezone: "America/Denver",
   hours: {
-    0: { open: "12:00", close: "20:00" },
-    1: null,
-    2: { open: "11:00", close: "21:00" },
-    3: { open: "11:00", close: "21:00" },
-    4: { open: "11:00", close: "21:00" },
-    5: { open: "11:00", close: "22:00" },
-    6: { open: "11:00", close: "22:00" },
+    0: { open: "09:00", close: "20:00" },
+    1: { open: "09:00", close: "20:00" },
+    2: { open: "09:00", close: "20:00" },
+    3: { open: "09:00", close: "20:00" },
+    4: { open: "09:00", close: "20:00" },
+    5: { open: "09:00", close: "20:00" },
+    6: { open: "09:00", close: "20:00" },
   } as Record<number, { open: string; close: string } | null>,
   notes: [
     "Closed Mondays.",
