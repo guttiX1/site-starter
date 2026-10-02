@@ -11,12 +11,12 @@ import {
   type OrderState,
 } from "@/lib/valley-meats/order";
 
-const TUESDAY_NOON_CHICAGO = "2026-10-06T17:00:00Z"; // open
-const MONDAY_NOON_CHICAGO = "2026-10-05T17:00:00Z"; // closed Mondays
+const TUESDAY_NOON_DENVER = "2026-10-06T18:00:00Z"; // open
+const TUESDAY_3AM_DENVER = "2026-10-06T09:00:00Z"; // closed
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.setSystemTime(TUESDAY_NOON_CHICAGO);
+  vi.setSystemTime(TUESDAY_NOON_DENVER);
 });
 afterEach(() => vi.useRealTimers());
 
@@ -126,7 +126,7 @@ describe("checkout safety", () => {
 
   it("refuses to place orders while the restaurant is closed", () => {
     const s = reviewOrder(readyOrder()).state;
-    vi.setSystemTime(MONDAY_NOON_CHICAGO);
+    vi.setSystemTime(TUESDAY_3AM_DENVER);
     expect(err(finalizeOrder(s))).toMatch(/closed/i);
   });
 });

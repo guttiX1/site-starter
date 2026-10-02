@@ -1,7 +1,7 @@
 # Valley Meats — Go-Live Checklist
 
 Adapted from the public "go-live" pre-launch skill idea (showstoppers must pass; polish can follow),
-rewritten for a voice-ordering restaurant site. Status below was checked against this branch on 2026-10-01.
+rewritten for a voice-ordering restaurant site. Status below was checked against this branch on 2026-10-02.
 
 **Legend:** PASS verified · FAIL blocks launch · PARTIAL some verified · TODO needs a human/real accounts
 
@@ -11,7 +11,7 @@ rewritten for a voice-ordering restaurant site. Status below was checked against
 
 | # | Check | Status | Evidence / what to do |
 |---|---|---|---|
-| 1 | Real business info (name, address, phone, hours, tax rate, menu, prices, allergen tags) | **FAIL** | `lib/valley-meats/menu.ts` is all placeholder (`123 Valley Road`, `(555) 010-0199`, tax 8.25%, invented menu). Also feeds the SEO schema, so wrong data would be published. Replace, then have the owner proof-read allergen tags. |
+| 1 | Real business info (name, address, phone, hours, tax rate, menu, prices, allergen tags) | **PARTIAL** | Confirmed in `lib/valley-meats/menu.ts`: name, phone (970) 704-9614, address 774 State Route 133, Carbondale CO 81623, timezone America/Denver. **Still unconfirmed (owner must check):** hours (currently 9–8 daily), tax rate (10.15% from public sources), contact email (placeholder), and the whole menu, prices and allergen tags (still invented). This data feeds the SEO schema, so wrong values get published. |
 | 2 | Core flow works end to end | **PARTIAL** | Verified with a scripted AI stand-in: add item → details → read-back → place; order cannot be placed without read-back; edits invalidate the read-back; double-placing is blocked; closed hours refuse orders. **Not yet verified** with a real model (Claude/Groq/Ollama), real microphone, or real ElevenLabs. Run the manual test script below. |
 | 3 | Orders actually reach the kitchen | **PARTIAL (built, needs your channel)** | Orders now go to any of: SMS to the kitchen/owner phone (Twilio), Slack/Discord webhook (readable ticket), email via Resend (optional), and/or a JSON webhook to your POS. A customer text receipt (`CUSTOMER_SMS=1`) is separate: best-effort, never blocks or fails an order, never counts as a delivery channel, capped by `DAILY_SMS_LIMIT`. Counts as delivered if at least one succeeds. **In production with no channel configured, orders are refused** (the agent tells the customer to call) instead of silently going to a log. Tested with mock endpoints: refuses with no channel or only failing channels; places with one working channel. **Not tested against real Slack/Discord/Resend.** You must set at least one channel (see `.env.example`) and run a real test order. Orders are still not stored in a database. |
 | 4 | Payments | **PASS (pay-in-person only)** | Card numbers are never taken by voice. In-person payment needs no payment code. Online payment via Stripe is **untested** and has no webhook, so paid status can't be confirmed: leave `STRIPE_SECRET_KEY` unset at launch, or add the `checkout.session.completed` webhook first. |

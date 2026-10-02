@@ -21,25 +21,26 @@ export const RESTAURANT = {
   name: "Valley Meats La Carniceria",
   phone: "(970) 704-9614",
   address: "774 State Route 133, Carbondale, CO 81623",
-  // Structured parts for schema.org. PLACEHOLDERS — replace with the real ones before launch.
+  // Name, phone and address confirmed by the owner / public listings. Anything marked [CONFIRM] is not.
   addressParts: { streetAddress: "774 State Route 133", addressLocality: "Carbondale", addressRegion: "CO", postalCode: "81623", addressCountry: "US" },
   // Legal/privacy details. PLACEHOLDERS — set `reviewed: true` only after the owner (and ideally a lawyer)
   // has checked the privacy page. While false the page shows a draft banner and is hidden from search engines.
   legal: {
     entityName: "Valley Meats La Carniceria",
-    contactEmail: "contact@valleymeats.com",
+    contactEmail: "[CONFIRM: owner's real email]",
     updated: "October 2, 2026",
     orderRetention: "12 months",
     reviewed: false,
   },
   cuisine: "Mexican",
   priceRange: "$$",
-  taxRate: 0.0765,
+  // [CONFIRM] with the owner/accountant: public sources list ~10.15% for Carbondale, but it depends on county and district.
+  taxRate: 0.1015,
   prepMinutes: { pickup: 20, delivery: 45 },
   deliveryFeeCents: 399,
   deliveryMinimumCents: 2000,
   deliveryRadiusMiles: 5,
-  // 0 = Sunday … 6 = Saturday. Times are 24h "HH:MM" in `timezone`.
+  // 0 = Sunday … 6 = Saturday. Times are 24h "HH:MM" in `timezone`. [CONFIRM] hours with the owner — not verified.
   timezone: "America/Denver",
   hours: {
     0: { open: "09:00", close: "20:00" },
@@ -51,7 +52,6 @@ export const RESTAURANT = {
     6: { open: "09:00", close: "20:00" },
   } as Record<number, { open: string; close: string } | null>,
   notes: [
-    "Closed Mondays.",
     "Parking is free behind the building.",
     "Vegetarian options available: choose veggie (grilled peppers, onions, beans) as the protein.",
     "Allergens: kitchen handles gluten, dairy, nuts and shellfish — we cannot guarantee allergen-free preparation.",
