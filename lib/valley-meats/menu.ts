@@ -19,28 +19,28 @@ export type MenuItem = {
 
 export const RESTAURANT = {
   name: "Valley Meats",
-  phone: "(555) 555-0199",
-  address: "456 Main Street, Springfield, IL 62701",
+  phone: "(970) 555-0199",
+  address: "123 Main Street, Carbondale, CO 81623",
   // Structured parts for schema.org. PLACEHOLDERS — replace with the real ones before launch.
-  addressParts: { streetAddress: "456 Main Street", addressLocality: "Springfield", addressRegion: "IL", postalCode: "62701", addressCountry: "US" },
+  addressParts: { streetAddress: "123 Main Street", addressLocality: "Carbondale", addressRegion: "CO", postalCode: "81623", addressCountry: "US" },
   // Legal/privacy details. PLACEHOLDERS — set `reviewed: true` only after the owner (and ideally a lawyer)
   // has checked the privacy page. While false the page shows a draft banner and is hidden from search engines.
   legal: {
     entityName: "Valley Meats LLC",
-    contactEmail: "info@valleymeats.local",
+    contactEmail: "info@valleymeats.com",
     updated: "October 2, 2026",
     orderRetention: "12 months",
     reviewed: false,
   },
   cuisine: "Mexican",
   priceRange: "$$",
-  taxRate: 0.0825,
+  taxRate: 0.07,
   prepMinutes: { pickup: 20, delivery: 45 },
   deliveryFeeCents: 399,
   deliveryMinimumCents: 2000,
   deliveryRadiusMiles: 5,
   // 0 = Sunday … 6 = Saturday. Times are 24h "HH:MM" in `timezone`.
-  timezone: "America/Chicago",
+  timezone: "America/Denver",
   hours: {
     0: { open: "12:00", close: "20:00" },
     1: null,
