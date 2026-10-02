@@ -19,15 +19,15 @@ export type MenuItem = {
 
 export const RESTAURANT = {
   name: "Valley Meats",
-  phone: "(970) 555-0199",
-  address: "123 Main Street, Carbondale, CO 81623",
+  phone: "(970) 704-9614",
+  address: "100 Main Street, Carbondale, CO 81623",
   // Structured parts for schema.org. PLACEHOLDERS — replace with the real ones before launch.
-  addressParts: { streetAddress: "123 Main Street", addressLocality: "Carbondale", addressRegion: "CO", postalCode: "81623", addressCountry: "US" },
+  addressParts: { streetAddress: "100 Main Street", addressLocality: "Carbondale", addressRegion: "CO", postalCode: "81623", addressCountry: "US" },
   // Legal/privacy details. PLACEHOLDERS — set `reviewed: true` only after the owner (and ideally a lawyer)
   // has checked the privacy page. While false the page shows a draft banner and is hidden from search engines.
   legal: {
-    entityName: "Valley Meats LLC",
-    contactEmail: "info@valleymeats.com",
+    entityName: "Valley Meats",
+    contactEmail: "contact@valleymeats.com",
     updated: "October 2, 2026",
     orderRetention: "12 months",
     reviewed: false,
