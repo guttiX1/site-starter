@@ -1,5 +1,5 @@
 import { MENU } from "@/lib/valley-meats/menu";
-import { json, rateLimited } from "@/lib/valley-meats/http";
+import { budgetExceeded, crossSite, json, rateLimited } from "@/lib/valley-meats/http";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -13,9 +13,11 @@ const VOCAB_PROMPT = `Valley Meats Mexican restaurant order. Menu: ${MENU.map((m
 
 /** Speech-to-text via OpenAI Whisper. */
 export async function POST(req: Request) {
+  if (crossSite(req)) return json({ error: "Forbidden." }, 403);
   const key = process.env.OPENAI_API_KEY;
   if (!key) return json({ error: "OPENAI_API_KEY is not configured." }, 503);
-  if (rateLimited(req, "stt", 30)) return json({ error: "Too many requests." }, 429);
+  if (await rateLimited(req, "stt", 30)) return json({ error: "Too many requests." }, 429);
+  if (await budgetExceeded("stt", Number(process.env.DAILY_VOICE_CALL_LIMIT) || 3000)) return json({ error: "Voice is busy right now." }, 503);
 
   let audio: File;
   try {

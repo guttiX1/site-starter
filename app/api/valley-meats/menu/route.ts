@@ -12,8 +12,8 @@ export function OPTIONS() {
 }
 
 /** Public read-only data for agents and assistants. No customer data, no ordering. */
-export function GET(req: Request) {
-  if (rateLimited(req, "menu", 60)) return Response.json({ error: "Too many requests." }, { status: 429, headers: CORS });
+export async function GET(req: Request) {
+  if (await rateLimited(req, "menu", 60)) return Response.json({ error: "Too many requests." }, { status: 429, headers: CORS });
   return Response.json(
     {
       restaurant: {
