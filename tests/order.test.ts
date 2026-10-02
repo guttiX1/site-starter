@@ -167,16 +167,16 @@ describe("untrusted client state", () => {
 });
 
 describe("seasonal hours", () => {
-  it("stays open until 9 PM in summer but closes at 8 PM in fall", async () => {
+  it("stays open until 9 PM in summer but closes at 8 PM in winter", async () => {
     const { openStatus } = await import("@/lib/valley-meats/menu");
     expect(openStatus(new Date("2026-07-15T02:30:00Z")).open).toBe(true); // Jul 14, 8:30 PM Denver
-    expect(openStatus(new Date("2026-10-15T02:30:00Z")).open).toBe(false); // Oct 14, 8:30 PM Denver
+    expect(openStatus(new Date("2026-11-15T03:30:00Z")).open).toBe(false); // Nov 14, 8:30 PM Denver (MST)
     expect(openStatus(new Date("2026-07-15T03:30:00Z")).open).toBe(false); // Jul 14, 9:30 PM Denver
   });
 
   it("describes both schedules", async () => {
     const { hoursText } = await import("@/lib/valley-meats/menu");
     expect(hoursText()).toContain("Every day: 9 AM – 8 PM");
-    expect(hoursText()).toMatch(/Summer hours \(June–August\): Every day: 9 AM – 9 PM/);
+    expect(hoursText()).toMatch(/Summer hours \(April–October\): Every day: 9 AM – 9 PM/);
   });
 });

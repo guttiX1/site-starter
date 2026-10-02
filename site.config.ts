@@ -1,7 +1,7 @@
 // ONE config per site. Everything SEO / AEO / agent-readiness is generated from this file by lib/site-kit.
 // For a new site: copy lib/site-kit + the thin route files, then rewrite this file (see docs/SITE_KIT.md).
 
-import { MENU, RESTAURANT, formatMoney, hoursText } from "@/lib/valley-meats/menu";
+import { MENU, RESTAURANT, currentHours, formatMoney, hoursText } from "@/lib/valley-meats/menu";
 import { siteUrl, type SiteConfig } from "@/lib/site-kit";
 
 const veg = MENU.filter((m) => m.tags?.some((t) => t === "vegetarian" || t === "vegan")).map((m) => m.name);
@@ -27,7 +27,7 @@ export const site: SiteConfig = {
   schemaType: "Restaurant",
   phone: RESTAURANT.phone,
   address: { text: RESTAURANT.address, ...RESTAURANT.addressParts },
-  hours: RESTAURANT.hours,
+  hours: currentHours(), // season at build time; rebuild when the season changes
   timezone: RESTAURANT.timezone,
   cuisine: RESTAURANT.cuisine,
   priceRange: RESTAURANT.priceRange,

@@ -47,12 +47,12 @@ export const RESTAURANT = {
   deliveryMinimumCents: 2000,
   deliveryRadiusMiles: 5,
   // 0 = Sunday … 6 = Saturday. Times are 24h "HH:MM" in `timezone`.
-  // Owner: 9 AM–9 PM in summer, 9 AM–8 PM fall/winter. [CONFIRM] which months count as summer, and spring hours.
+  // Owner: 9 AM–9 PM in summer, 9 AM–8 PM fall/winter. Summer = April–October (owner, 2026-10-02).
   timezone: "America/Denver",
   hours: daily("09:00", "20:00"),
   summerHours: daily("09:00", "21:00"),
-  summerMonths: [6, 7, 8], // 1 = January … 12 = December
-  summerLabel: "June–August",
+  summerMonths: [4, 5, 6, 7, 8, 9, 10], // 1 = January … 12 = December
+  summerLabel: "April–October",
   notes: [
     "Parking is free behind the building.",
     "Vegetarian options available: choose veggie (grilled peppers, onions, beans) as the protein.",
