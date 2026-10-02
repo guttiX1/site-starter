@@ -17,6 +17,12 @@ export type MenuItem = {
   tags?: string[]; // e.g. "gluten-free", "vegetarian"
 };
 
+type Hours = Record<number, { open: string; close: string } | null>;
+
+function daily(open: string, close: string): Hours {
+  return Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map((d) => [d, { open, close }]));
+}
+
 export const RESTAURANT = {
   name: "Valley Meats La Carniceria",
   phone: "(970) 704-9614",
@@ -40,17 +46,13 @@ export const RESTAURANT = {
   deliveryFeeCents: 399,
   deliveryMinimumCents: 2000,
   deliveryRadiusMiles: 5,
-  // 0 = Sunday … 6 = Saturday. Times are 24h "HH:MM" in `timezone`. [CONFIRM] hours with the owner — not verified.
+  // 0 = Sunday … 6 = Saturday. Times are 24h "HH:MM" in `timezone`.
+  // Owner: 9 AM–9 PM in summer, 9 AM–8 PM fall/winter. [CONFIRM] which months count as summer, and spring hours.
   timezone: "America/Denver",
-  hours: {
-    0: { open: "09:00", close: "20:00" },
-    1: { open: "09:00", close: "20:00" },
-    2: { open: "09:00", close: "20:00" },
-    3: { open: "09:00", close: "20:00" },
-    4: { open: "09:00", close: "20:00" },
-    5: { open: "09:00", close: "20:00" },
-    6: { open: "09:00", close: "20:00" },
-  } as Record<number, { open: string; close: string } | null>,
+  hours: daily("09:00", "20:00"),
+  summerHours: daily("09:00", "21:00"),
+  summerMonths: [6, 7, 8], // 1 = January … 12 = December
+  summerLabel: "June–August",
   notes: [
     "Parking is free behind the building.",
     "Vegetarian options available: choose veggie (grilled peppers, onions, beans) as the protein.",
@@ -86,7 +88,20 @@ export function formatMoney(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-export const hoursText = () => kitHoursText(RESTAURANT.hours);
+/** Hours in effect at `now`, switching to summer hours by restaurant-local month. */
+export function currentHours(now = new Date()): Hours {
+  const month = Number(new Intl.DateTimeFormat("en-US", { timeZone: RESTAURANT.timezone, month: "numeric" }).format(now));
+  return RESTAURANT.summerMonths.includes(month) ? RESTAURANT.summerHours : RESTAURANT.hours;
+}
+
+function scheduleText(hours: Hours): string {
+  const text = kitHoursText(hours);
+  const times = new Set(text.split("\n").map((l) => l.split(": ")[1]));
+  return times.size === 1 ? `Every day: ${[...times][0]}` : text;
+}
+
+export const hoursText = () =>
+  `${scheduleText(RESTAURANT.hours)}\nSummer hours (${RESTAURANT.summerLabel}): ${scheduleText(RESTAURANT.summerHours).replace(/\n/g, "; ")}`;
 
 /** Is the restaurant open at `now` (restaurant-local time)? */
-export const openStatus = (now = new Date()) => kitOpenStatus(RESTAURANT.hours, RESTAURANT.timezone, now);
+export const openStatus = (now = new Date()) => kitOpenStatus(currentHours(now), RESTAURANT.timezone, now);
