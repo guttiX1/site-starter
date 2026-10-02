@@ -19,17 +19,17 @@ export type MenuItem = {
 
 export const RESTAURANT = {
   name: "Valley Meats",
-  phone: "(555) 010-0199",
-  address: "123 Valley Road, Springfield",
+  phone: "(555) 555-0199",
+  address: "456 Main Street, Springfield, IL 62701",
   // Structured parts for schema.org. PLACEHOLDERS — replace with the real ones before launch.
-  addressParts: { streetAddress: "123 Valley Road", addressLocality: "Springfield", addressRegion: "IL", postalCode: "62701", addressCountry: "US" },
+  addressParts: { streetAddress: "456 Main Street", addressLocality: "Springfield", addressRegion: "IL", postalCode: "62701", addressCountry: "US" },
   // Legal/privacy details. PLACEHOLDERS — set `reviewed: true` only after the owner (and ideally a lawyer)
   // has checked the privacy page. While false the page shows a draft banner and is hidden from search engines.
   legal: {
-    entityName: "Valley Meats [CONFIRM legal business name]",
-    contactEmail: "privacy@example.com",
-    updated: "October 1, 2026",
-    orderRetention: "[CONFIRM how long order records are kept, e.g. 12 months]",
+    entityName: "Valley Meats LLC",
+    contactEmail: "info@valleymeats.local",
+    updated: "October 2, 2026",
+    orderRetention: "12 months",
     reviewed: false,
   },
   cuisine: "Mexican",
