@@ -487,7 +487,7 @@ export default function VoiceAgent() {
             </button>
           </div>
         ) : order.cart.length === 0 ? (
-          <p className="vm-dim">Nothing yet — try “Two carne asada tacos and a horchata.”</p>
+          <p className="vm-dim">Nothing yet — try “Two asada tacos and a guacamole.”</p>
         ) : (
           <>
             <ul>

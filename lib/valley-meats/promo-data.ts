@@ -12,6 +12,7 @@ export type PromoData = {
   tacoPriceCents: number;
   twoTacosCents: number;
   proteins: string[];
+  proteinCount: number;
   categories: string[];
   itemCount: number;
   pickupMin: number;
@@ -22,12 +23,12 @@ export type PromoData = {
 
 export function promoData(): PromoData {
   const taco = MENU_BY_ID.get("taco");
-  const plate = MENU_BY_ID.get("carne-asada-plate");
-  if (!taco || !plate) throw new Error("promo needs the 'taco' and 'carne-asada-plate' menu items");
+  const plate = MENU_BY_ID.get("platillo");
+  if (!taco || !plate) throw new Error("promo needs the 'taco' and 'platillo' menu items");
 
   // The sample order goes through the same code the voice agent uses, so the totals are what a customer would pay.
-  let s = addItem(EMPTY_ORDER, { item: "taco", quantity: 2, option: "carne asada" }).state;
-  s = addItem(s, { item: "horchata", quantity: 1 }).state;
+  let s = addItem(EMPTY_ORDER, { item: "taco", quantity: 2, option: "asada" }).state;
+  s = addItem(s, { item: "guacamole", quantity: 1 }).state;
   if (s.cart.length !== 2) throw new Error("promo sample order could not be built from the menu");
   const t = totals(s);
 
@@ -36,7 +37,8 @@ export function promoData(): PromoData {
     tacoName: taco.name,
     tacoPriceCents: taco.priceCents,
     twoTacosCents: taco.priceCents * 2,
-    proteins: taco.options ?? [],
+    proteins: (taco.options ?? []).slice(0, 5), // the video has room for five
+    proteinCount: taco.options?.length ?? 0,
     categories: [...new Set(MENU.map((m) => m.category.toLowerCase().replace(" & ", " & ")))],
     itemCount: MENU.length,
     pickupMin: RESTAURANT.prepMinutes.pickup,
@@ -48,8 +50,8 @@ export function promoData(): PromoData {
       { img: "tray", title: RESTAURANT.name.toLowerCase() + ".", priceCents: null },
     ],
     sample: {
-      utterance: "two carne asada tacos and a horchata",
-      reply: "Two carne asada tacos and a horchata. Anything else?",
+      utterance: "two asada tacos and a guacamole",
+      reply: "Two asada tacos and a guacamole. Anything else?",
       subtotalCents: t.subtotalCents,
       taxCents: t.taxCents,
       totalCents: t.totalCents,

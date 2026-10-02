@@ -10,15 +10,16 @@ describe("promo video data", () => {
     const taco = MENU_BY_ID.get("taco")!;
     expect(d.tacoPriceCents).toBe(taco.priceCents);
     expect(d.twoTacosCents).toBe(taco.priceCents * 2);
-    expect(d.proteins).toEqual(taco.options);
+    expect(d.proteins).toEqual(taco.options!.slice(0, 5));
+    expect(d.proteinCount).toBe(taco.options!.length);
     expect(d.itemCount).toBe(MENU.length);
     expect(d.pickupMin).toBe(RESTAURANT.prepMinutes.pickup);
   });
 
   it("sample order totals match the order logic (subtotal + tax)", () => {
     const taco = MENU_BY_ID.get("taco")!.priceCents;
-    const horchata = MENU_BY_ID.get("horchata")!.priceCents;
-    expect(d.sample.subtotalCents).toBe(taco * 2 + horchata);
+    const guac = MENU_BY_ID.get("guacamole")!.priceCents;
+    expect(d.sample.subtotalCents).toBe(taco * 2 + guac);
     expect(d.sample.totalCents).toBe(d.sample.subtotalCents + d.sample.taxCents);
   });
 

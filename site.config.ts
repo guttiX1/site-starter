@@ -4,7 +4,7 @@
 import { MENU, RESTAURANT, currentHours, formatMoney, hoursText } from "@/lib/valley-meats/menu";
 import { siteUrl, type SiteConfig } from "@/lib/site-kit";
 
-const veg = MENU.filter((m) => m.tags?.some((t) => t === "vegetarian" || t === "vegan")).map((m) => m.name);
+const meats = MENU.find((m) => m.id === "taco")?.options ?? [];
 
 const faqs = [
   { q: `What are ${RESTAURANT.name}'s hours?`, a: hoursText().replace(/\n/g, "; ") + "." },
@@ -13,7 +13,7 @@ const faqs = [
     q: "Do you offer delivery?",
     a: `Yes, within ${RESTAURANT.deliveryRadiusMiles} miles. Delivery costs ${formatMoney(RESTAURANT.deliveryFeeCents)} with a ${formatMoney(RESTAURANT.deliveryMinimumCents)} minimum before tax, and usually takes about ${RESTAURANT.prepMinutes.delivery} minutes. Pickup is ready in about ${RESTAURANT.prepMinutes.pickup} minutes.`,
   },
-  { q: "Do you have vegetarian or vegan options?", a: `Yes: ${veg.join(", ")}. Choose the veggie option for tacos, burritos, quesadillas, tortas, enchiladas and nachos.` },
+  { q: "What meats can I choose?", a: `Tacos, burritos, tortas, quesadillas and platillos come with your choice of ${meats.join(", ")}.` },
   { q: "Can I order by voice?", a: `Yes. Use the voice assistant on this page to order, ask questions and check out by speaking, or call ${RESTAURANT.phone}.` },
   { q: "How can I pay?", a: "Pay in person at pickup or to the delivery driver, or pay online through a secure payment link when it is available." },
   { q: "Can you accommodate allergies?", a: RESTAURANT.notes.find((n) => /allergen/i.test(n)) ?? "Please ask us about allergens before ordering." },

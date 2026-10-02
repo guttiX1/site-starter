@@ -7,7 +7,7 @@ const order = {
   orderId: "VM-TEST",
   placedAt: "2026-10-06T17:00:00.000Z",
   paymentStatus: "pay_in_person",
-  order: { items: ["2 × Street Taco (carne asada)"], fulfillment: "pickup", deliveryAddress: null, customerName: "Sam", customerPhone: "555-123-4567", payment: "in_person", subtotal: 7.5, tax: 0.62, deliveryFee: 0, total: 8.12, placed: null },
+  order: { items: ["2 × Taco (asada)"], fulfillment: "pickup", deliveryAddress: null, customerName: "Sam", customerPhone: "555-123-4567", payment: "in_person", subtotal: 7.5, tax: 0.62, deliveryFee: 0, total: 8.12, placed: null },
 } as unknown as PlacedOrder;
 
 const CHANNEL_ENV = ["ORDER_WEBHOOK_URL", "ORDER_SLACK_WEBHOOK_URL", "RESEND_API_KEY", "ORDER_EMAIL_TO", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM", "ORDER_SMS_TO", "CUSTOMER_SMS", "ALLOW_LOG_ONLY_ORDERS", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"];
@@ -105,7 +105,7 @@ describe("order delivery fails closed", () => {
 describe("message text", () => {
   it("kitchen ticket has what the kitchen needs", () => {
     const t = ticketText(order);
-    for (const s of ["VM-TEST", "PICKUP", "PAY IN PERSON", "Sam", "555-123-4567", "Street Taco", "TOTAL $8.12"]) expect(t).toContain(s);
+    for (const s of ["VM-TEST", "PICKUP", "PAY IN PERSON", "Sam", "555-123-4567", "Taco (asada)", "TOTAL $8.12"]) expect(t).toContain(s);
   });
   it("warns the kitchen not to start unpaid online orders", () => {
     expect(ticketText({ ...order, paymentStatus: "awaiting_online_payment" } as PlacedOrder)).toMatch(/do not start until paid/i);

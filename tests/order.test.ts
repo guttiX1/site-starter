@@ -23,7 +23,7 @@ afterEach(() => vi.useRealTimers());
 const err = (r: { result: unknown }) => (r.result as { error?: string }).error;
 
 function readyOrder(): OrderState {
-  let s = addItem(EMPTY_ORDER, { item: "taco", quantity: 2, option: "carne asada" }).state;
+  let s = addItem(EMPTY_ORDER, { item: "taco", quantity: 2, option: "asada" }).state;
   s = setDetails(s, { fulfillment: "pickup", customer_name: "Sam", customer_phone: "555-123-4567", payment: "in_person" }).state;
   return s;
 }
@@ -46,23 +46,23 @@ describe("adding and removing items", () => {
 
   it("rejects unknown items and bad quantities", () => {
     expect(err(addItem(EMPTY_ORDER, { item: "sushi" }))).toBeTruthy();
-    expect(err(addItem(EMPTY_ORDER, { item: "churros", quantity: 0 }))).toBeTruthy();
-    expect(err(addItem(EMPTY_ORDER, { item: "churros", quantity: 999 }))).toBeTruthy();
+    expect(err(addItem(EMPTY_ORDER, { item: "guacamole", quantity: 0 }))).toBeTruthy();
+    expect(err(addItem(EMPTY_ORDER, { item: "guacamole", quantity: 999 }))).toBeTruthy();
   });
 
   it("merges identical lines and prices from the menu", () => {
-    let s = addItem(EMPTY_ORDER, { item: "churros", quantity: 1 }).state;
-    s = addItem(s, { item: "churros", quantity: 2 }).state;
+    let s = addItem(EMPTY_ORDER, { item: "guacamole", quantity: 1 }).state;
+    s = addItem(s, { item: "guacamole", quantity: 2 }).state;
     expect(s.cart).toHaveLength(1);
     expect(s.cart[0].quantity).toBe(3);
-    expect(totals(s).subtotalCents).toBe(649 * 3);
+    expect(totals(s).subtotalCents).toBe(599 * 3);
   });
 
   it("removes items and reduces quantities", () => {
-    let s = addItem(EMPTY_ORDER, { item: "churros", quantity: 3 }).state;
-    s = removeItem(s, { item: "churros", quantity: 1 }).state;
+    let s = addItem(EMPTY_ORDER, { item: "guacamole", quantity: 3 }).state;
+    s = removeItem(s, { item: "guacamole", quantity: 1 }).state;
     expect(s.cart[0].quantity).toBe(2);
-    s = removeItem(s, { item: "churros" }).state;
+    s = removeItem(s, { item: "guacamole" }).state;
     expect(s.cart).toHaveLength(0);
   });
 });
@@ -84,7 +84,7 @@ describe("checkout safety", () => {
 
   it("any change after the read-back invalidates it", () => {
     let s = reviewOrder(readyOrder()).state;
-    s = addItem(s, { item: "churros" }).state;
+    s = addItem(s, { item: "guacamole" }).state;
     expect(finalizeOrder(s).order).toBeUndefined();
     s = reviewOrder(readyOrder()).state;
     s = setDetails(s, { customer_name: "Alex" }).state;
@@ -94,17 +94,17 @@ describe("checkout safety", () => {
   it("cannot be placed twice, and a placed cart is frozen", () => {
     const placed = finalizeOrder(reviewOrder(readyOrder()).state).state;
     expect(err(finalizeOrder(placed))).toMatch(/already/i);
-    expect(err(addItem(placed, { item: "churros" }))).toMatch(/already placed/i);
+    expect(err(addItem(placed, { item: "guacamole" }))).toMatch(/already placed/i);
   });
 
   it("reports what is missing", () => {
-    const r = reviewOrder(addItem(EMPTY_ORDER, { item: "churros" }).state);
+    const r = reviewOrder(addItem(EMPTY_ORDER, { item: "guacamole" }).state);
     expect((r.result as { ready: boolean; missing: string[] }).ready).toBe(false);
     expect((r.result as { missing: string[] }).missing.join(" ")).toMatch(/name|phone|pickup|pay/i);
   });
 
   it("requires a payment choice and a plausible phone number", () => {
-    let s = addItem(EMPTY_ORDER, { item: "churros" }).state;
+    let s = addItem(EMPTY_ORDER, { item: "guacamole" }).state;
     s = setDetails(s, { fulfillment: "pickup", customer_name: "Sam", customer_phone: "12" }).state;
     const missing = (reviewOrder(s).result as { missing: string[] }).missing.join(" ");
     expect(missing).toMatch(/phone/);
@@ -112,12 +112,12 @@ describe("checkout safety", () => {
   });
 
   it("refuses online payment when it isn't enabled", () => {
-    const r = setDetails(addItem(EMPTY_ORDER, { item: "churros" }).state, { payment: "online" }, { onlinePayment: false });
+    const r = setDetails(addItem(EMPTY_ORDER, { item: "guacamole" }).state, { payment: "online" }, { onlinePayment: false });
     expect(err(r)).toMatch(/online payment/i);
   });
 
   it("enforces the delivery minimum and fee", () => {
-    let s = addItem(EMPTY_ORDER, { item: "churros", quantity: 1 }).state; // $6.49 < $20 minimum
+    let s = addItem(EMPTY_ORDER, { item: "guacamole", quantity: 1 }).state; // $5.99 < $20 minimum
     s = setDetails(s, { fulfillment: "delivery", delivery_address: "1 Main St", customer_name: "Sam", customer_phone: "555-123-4567", payment: "in_person" }).state;
     expect((reviewOrder(s).result as { ready: boolean }).ready).toBe(false);
     s = addItem(s, { item: "burrito", quantity: 1, option: "pollo" }).state; // + $11.99 => above minimum
@@ -136,8 +136,8 @@ describe("untrusted client state", () => {
     const s = sanitizeState({
       cart: [
         { itemId: "nope", quantity: 5 },
-        { itemId: "churros", quantity: 9999, option: "bogus" },
-        { itemId: "churros", quantity: -3 },
+        { itemId: "guacamole", quantity: 9999, option: "bogus" },
+        { itemId: "guacamole", quantity: -3 },
       ],
       fulfillment: "teleport",
     });
@@ -148,8 +148,8 @@ describe("untrusted client state", () => {
   });
 
   it("recomputes prices from the menu, never from the client", () => {
-    const s = sanitizeState({ cart: [{ itemId: "churros", quantity: 1, priceCents: 1 }] });
-    expect(totals(s).subtotalCents).toBe(649);
+    const s = sanitizeState({ cart: [{ itemId: "guacamole", quantity: 1, priceCents: 1 }] });
+    expect(totals(s).subtotalCents).toBe(599);
   });
 
   it("only keeps https Stripe payment links", () => {
@@ -178,5 +178,27 @@ describe("seasonal hours", () => {
     const { hoursText } = await import("@/lib/valley-meats/menu");
     expect(hoursText()).toContain("Every day: 9 AM – 8 PM");
     expect(hoursText()).toMatch(/Summer hours \(April–October\): Every day: 9 AM – 9 PM/);
+  });
+});
+
+describe("real menu", () => {
+  it("accepts meat names with or without accents", () => {
+    const r = addItem(EMPTY_ORDER, { item: "taco", quantity: 1, option: "Chicharron" });
+    expect(err(r)).toBeUndefined();
+    expect(r.state.cart[0].option).toBe("chicharrón");
+  });
+
+  it("asks for a meat the menu doesn't have", () => {
+    expect(err(addItem(EMPTY_ORDER, { item: "burrito", option: "veggie" }))).toMatch(/needs one of these options/);
+  });
+
+  it("refuses orders in production until the owner confirms prices", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const s = reviewOrder(readyOrder()).state;
+      expect(err(finalizeOrder(s))).toMatch(/isn't open yet/);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

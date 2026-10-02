@@ -298,7 +298,7 @@ function buildScenes(D: PromoData, F: Fonts, I: Images): Scene[] {
       headline(c, F, ["pick your ", "protein."], 470, t);
       const a = eOut(seg(t, 0.35, 0.8));
       c.globalAlpha = a;
-      text(c, F, `${D.proteins.length} ways to build it.`, W / 2, 545, { size: 36, weight: 500, color: DIM });
+      text(c, F, `${D.proteinCount} meats to choose from.`, W / 2, 545, { size: 36, weight: 500, color: DIM });
       c.globalAlpha = 1;
 
       const n = D.proteins.length;

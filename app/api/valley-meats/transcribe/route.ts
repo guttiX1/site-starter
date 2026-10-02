@@ -1,4 +1,4 @@
-import { MENU } from "@/lib/valley-meats/menu";
+import { MENU, MEATS } from "@/lib/valley-meats/menu";
 import { budgetExceeded, crossSite, json, rateLimited } from "@/lib/valley-meats/http";
 
 export const runtime = "nodejs";
@@ -6,9 +6,9 @@ export const maxDuration = 30;
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
-// Whisper does better on menu vocabulary (al pastor, horchata…) with a hint.
+// Whisper does better on menu vocabulary (al pastor, suadero, buche…) with a hint.
 const VOCAB_PROMPT = `Valley Meats Mexican restaurant order. Menu: ${MENU.map((m) => m.name)
-  .concat(["carne asada", "al pastor", "carnitas", "pollo", "veggie"])
+  .concat(MEATS, ["salsa naranja", "salsa verde"])
   .join(", ")}.`;
 
 /** Speech-to-text via OpenAI Whisper. */

@@ -153,6 +153,13 @@ function mutate(state: OrderState, fn: (s: OrderState) => unknown): Result {
   return { state: next, result };
 }
 
+const fold = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+/** Menu option matching the customer's words, ignoring case and accents ("chicharron" → "chicharrón"). */
+function matchOption(options: string[] | undefined, said: string): string | undefined {
+  return options?.find((o) => fold(o) === fold(said));
+}
+
 export function addItem(state: OrderState, args: { item: string; quantity?: number; option?: string; notes?: string }): Result {
   return mutate(state, (s) => {
     const matches = findItems(String(args.item ?? ""));
@@ -161,9 +168,9 @@ export function addItem(state: OrderState, args: { item: string; quantity?: numb
     const item = matches[0];
     const quantity = Math.floor(Number(args.quantity ?? 1));
     if (!(quantity >= 1 && quantity <= MAX_LINE_QTY)) return { error: `Quantity must be between 1 and ${MAX_LINE_QTY}.` };
-    let option = typeof args.option === "string" ? args.option.toLowerCase().trim() : undefined;
+    let option = typeof args.option === "string" ? matchOption(item.options, args.option) : undefined;
     if (item.options) {
-      if (!option || !item.options.includes(option)) {
+      if (!option) {
         return { error: `${item.name} needs one of these options: ${item.options.join(", ")}. Ask the customer.` };
       }
     } else option = undefined;
@@ -267,6 +274,9 @@ export function finalizeOrder(state: OrderState): Result & { order?: PlacedOrder
   if (missing.length) return { state, result: { error: "Order incomplete", missing } };
   if (!state.readBackHash || state.readBackHash !== orderHash(state)) {
     return { state, result: { error: "The customer hasn't confirmed this exact order. Call review_order, read it back, and get a yes first." } };
+  }
+  if (!RESTAURANT.pricesConfirmed && process.env.NODE_ENV === "production") {
+    return { state, result: { error: `Online ordering isn't open yet. Apologize and ask them to call ${RESTAURANT.phone}.` } };
   }
   if (!openStatus().open) return { state, result: { error: "The restaurant is closed right now." } };
   if (state.fulfillment === "delivery" && totals(state).subtotalCents < RESTAURANT.deliveryMinimumCents) {

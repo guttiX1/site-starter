@@ -7,14 +7,14 @@ import { hoursText as kitHoursText, openStatus as kitOpenStatus } from "../site-
 export type MenuItem = {
   id: string;
   name: string;
-  category: "Tacos & Burritos" | "Plates" | "Sides" | "Drinks" | "Desserts";
+  category: "Tacos" | "Burritos" | "Tortas" | "Quesadillas" | "Plates" | "Sides";
   priceCents: number;
   description: string;
   /** If present, the customer must pick one (e.g. protein). */
   options?: string[];
   /** Words a customer might say instead of the official name. */
   aliases?: string[];
-  tags?: string[]; // e.g. "gluten-free", "vegetarian"
+  tags?: string[]; // dietary tags — only add ones the owner has confirmed
 };
 
 type Hours = Record<number, { open: string; close: string } | null>;
@@ -53,33 +53,32 @@ export const RESTAURANT = {
   summerHours: daily("09:00", "21:00"),
   summerMonths: [4, 5, 6, 7, 8, 9, 10], // 1 = January … 12 = December
   summerLabel: "April–October",
+  // [CONFIRM] Set true only after the owner gives real prices for every item in MENU.
+  pricesConfirmed: false,
   notes: [
-    "Parking is free behind the building.",
-    "Vegetarian options available: choose veggie (grilled peppers, onions, beans) as the protein.",
-    "Allergens: kitchen handles gluten, dairy, nuts and shellfish — we cannot guarantee allergen-free preparation.",
+    "Tacos, burritos and quesadillas come with a choice of salsa naranja or salsa verde: ask which, and put it in the item notes.",
+    "Tortas and platillos come with chile toreado or encurtido (pickled); platillos also need corn or flour tortillas: ask, and put it in the item notes.",
+    "Allergens: [CONFIRM with owner] Please ask the restaurant about allergens before ordering.",
   ],
 };
 
-const PROTEINS = ["carne asada", "al pastor", "carnitas", "pollo", "veggie"];
+// Items, meats, included toppings and sides are from the owner's menu board (2026-10-02).
+// PRICES ARE PLACEHOLDERS: the board shows no prices. Until `pricesConfirmed` is true, production refuses orders.
+export const MEATS = ["asada", "barbacoa", "carnitas", "pollo", "suadero", "tripa", "lengua", "buche", "chicharrón", "al pastor", "chorizo", "fajitas"];
 
 export const MENU: MenuItem[] = [
-  { id: "taco", name: "Street Taco", category: "Tacos & Burritos", priceCents: 375, description: "Corn tortilla, onion, cilantro, salsa verde. Priced per taco.", options: PROTEINS, aliases: ["tacos", "street tacos"], tags: ["gluten-free"] },
-  { id: "burrito", name: "Burrito", category: "Tacos & Burritos", priceCents: 1199, description: "Large flour tortilla with rice, beans, cheese, pico de gallo and your protein.", options: PROTEINS, aliases: ["burritos"] },
-  { id: "quesadilla", name: "Quesadilla", category: "Tacos & Burritos", priceCents: 1099, description: "Grilled flour tortilla with melted Oaxaca cheese and your protein.", options: PROTEINS, aliases: ["quesadillas"], tags: ["vegetarian-with-veggie"] },
-  { id: "torta", name: "Torta", category: "Tacos & Burritos", priceCents: 1249, description: "Toasted telera roll with beans, avocado, lettuce, tomato and your protein.", options: PROTEINS, aliases: ["tortas"] },
-  { id: "enchiladas", name: "Enchilada Plate", category: "Plates", priceCents: 1449, description: "Three corn tortillas rolled with your protein, smothered in red or green sauce, with rice and beans.", options: PROTEINS, aliases: ["enchiladas"] },
-  { id: "carne-asada-plate", name: "Carne Asada Plate", category: "Plates", priceCents: 1899, description: "Grilled marinated skirt steak with rice, beans, grilled onions and tortillas.", aliases: ["carne asada plate", "steak plate"], tags: ["gluten-free-without-tortillas"] },
-  { id: "nachos", name: "Loaded Nachos", category: "Plates", priceCents: 1299, description: "Chips with queso, beans, pico de gallo, sour cream, jalapeños and your protein.", options: PROTEINS },
-  { id: "chips-salsa", name: "Chips & Salsa", category: "Sides", priceCents: 399, description: "Fresh fried tortilla chips with house salsa roja.", aliases: ["chips and salsa"], tags: ["vegan", "gluten-free"] },
-  { id: "guac", name: "Guacamole", category: "Sides", priceCents: 599, description: "Fresh smashed avocado with lime, onion and cilantro.", aliases: ["guacamole"], tags: ["vegan", "gluten-free"] },
-  { id: "rice-beans", name: "Rice & Beans", category: "Sides", priceCents: 449, description: "Mexican rice and refried or black beans.", aliases: ["rice and beans"], options: ["refried", "black"], tags: ["vegetarian"] },
-  { id: "elote", name: "Elote", category: "Sides", priceCents: 549, description: "Grilled street corn with mayo, cotija, chile and lime.", aliases: ["street corn"], tags: ["vegetarian", "gluten-free"] },
-  { id: "horchata", name: "Horchata", category: "Drinks", priceCents: 349, description: "Cinnamon rice milk, served cold.", tags: ["vegetarian", "contains-dairy"] },
-  { id: "agua-fresca", name: "Agua Fresca", category: "Drinks", priceCents: 349, description: "Fresh fruit water.", options: ["jamaica", "tamarindo", "pineapple"], aliases: ["agua"], tags: ["vegan", "gluten-free"] },
-  { id: "jarritos", name: "Jarritos", category: "Drinks", priceCents: 299, description: "Mexican fruit soda.", options: ["lime", "mandarin", "tamarind", "pineapple"], tags: ["vegan"] },
-  { id: "mexican-coke", name: "Mexican Coke", category: "Drinks", priceCents: 349, description: "Glass-bottle cane sugar cola.", aliases: ["coke", "coca cola"], tags: ["vegan"] },
-  { id: "churros", name: "Churros", category: "Desserts", priceCents: 649, description: "Cinnamon sugar churros with chocolate dipping sauce.", tags: ["vegetarian"] },
-  { id: "flan", name: "Flan", category: "Desserts", priceCents: 599, description: "Classic caramel custard.", tags: ["vegetarian", "gluten-free", "contains-dairy"] },
+  { id: "taco", name: "Taco", category: "Tacos", priceCents: 375, description: "With cilantro, onion and lime. Choice of salsa naranja or salsa verde. Priced per taco.", options: MEATS, aliases: ["tacos"] },
+  { id: "burrito", name: "Burrito", category: "Burritos", priceCents: 1199, description: "With cilantro, onion, avocado and refried pinto beans. Choice of salsa naranja or salsa verde.", options: MEATS, aliases: ["burritos"] },
+  { id: "torta", name: "Torta", category: "Tortas", priceCents: 1249, description: "Regular torta with mayo, cilantro, onion, avocado and chile toreado or pickled jalapeño (encurtido).", options: MEATS, aliases: ["tortas", "torta regular"] },
+  { id: "torta-especial", name: "Torta Especial", category: "Tortas", priceCents: 1399, description: "With mayo, lettuce, tomato, onion, avocado and chile toreado or pickled jalapeño (encurtido).", options: MEATS, aliases: ["tortas especiales", "special torta"] },
+  { id: "quesadilla", name: "Quesadilla", category: "Quesadillas", priceCents: 1099, description: "Choice of salsa naranja or salsa verde, served on the side.", options: MEATS, aliases: ["quesadillas"] },
+  { id: "platillo", name: "Platillo de Carne", category: "Plates", priceCents: 1699, description: "Your choice of meat with refried beans and cheese, lettuce, tomato, onion, chile toreado or encurtido, and corn or flour tortillas.", options: MEATS, aliases: ["platillo", "plate", "meat plate", "platillo de carne al gusto"] },
+  { id: "guacamole", name: "Guacamole", category: "Sides", priceCents: 599, description: "Side of guacamole.", aliases: ["guac"] },
+  { id: "frijoles", name: "Frijoles Refritos", category: "Sides", priceCents: 449, description: "Side of refried beans.", aliases: ["refried beans", "beans", "frijoles"] },
+  { id: "crema", name: "Crema", category: "Sides", priceCents: 149, description: "Side of Mexican crema.", aliases: ["sour cream", "cream"] },
+  { id: "pico", name: "Pico de Gallo", category: "Sides", priceCents: 299, description: "Side of pico de gallo.", aliases: ["pico"] },
+  { id: "chile-toreado", name: "Chile Toreado o Encurtido", category: "Sides", priceCents: 199, description: "Side of blistered (toreado) or pickled (encurtido) chiles.", options: ["toreado", "encurtido"], aliases: ["chiles toreados", "jalapeños", "chile"] },
+  { id: "cebollas", name: "Cebollas Asadas", category: "Sides", priceCents: 299, description: "Side of grilled onions.", aliases: ["grilled onions", "cebollitas"] },
 ];
 
 export const MENU_BY_ID = new Map(MENU.map((m) => [m.id, m]));
